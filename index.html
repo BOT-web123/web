@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>TV Colombia</title>
+    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif; /* Using Inter font */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-direction: column; /* Allow content to stack vertically */
+        }
+        #iniciar {
+            font-size: 1.5em;
+            background: none;
+            border: 2px solid white;
+            padding: 1em 2em;
+            color: white;
+            cursor: pointer;
+            border-radius: 10px; /* Rounded corners */
+            transition: background-color 0.3s, color 0.3s, transform 0.2s;
+        }
+        #iniciar:hover {
+            background-color: white;
+            color: black;
+            transform: scale(1.05);
+        }
+        #tv-container {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* For absolute positioning of controls */
+            overflow: hidden; /* Ensure content doesn't spill out */
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensure video fits within the player without cropping */
+            pointer-events: auto; /* Allow interaction with the video element itself if needed for VJS controls */
+        }
+        #controls-overlay, #channel-info {
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            opacity: 1;
+            visibility: visible;
+        }
+        #controls-overlay.hidden, #channel-info.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none; /* Disable interaction when hidden */
+        }
+        #controls-overlay {
+            position: absolute;
+            bottom: 20px;
+            width: 90%;
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .control-button {
+            background: #333;
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1; /* Distribute space evenly */
+            min-width: 120px; /* Ensure buttons don't get too small */
+        }
+        .control-button:hover {
+            background-color: #555;
+            transform: translateY(-2px);
+        }
+        .control-button i {
+            font-size: 1.3em;
+        }
+        #channel-info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 1.4em;
+            font-weight: bold;
+            text-align: center;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden; /* Hide overflow */
+            text-overflow: ellipsis; /* Add ellipsis if text overflows */
+            max-width: 80%; /* Limit width on smaller screens */
+        }
+        #channel-selector {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            margin-top: 10px; /* Space from other controls */
+            flex-basis: 100%; /* Take full width in the flex container */
+            justify-content: center;
+        }
+        #channel-input {
+            width: 80px;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #222;
+            color: white;
+            font-size: 1em;
+            text-align: center;
+        }
+        #go-channel-btn {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 1em;
+        }
+        #go-channel-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #iniciar {
+                font-size: 1.2em;
+                padding: 0.8em 1.5em;
+            }
+            #controls-overlay {
+                flex-direction: row; /* Keep row direction for controls */
+                bottom: 10px;
+                padding: 10px;
+                width: 95%;
+            }
+            .control-button {
+                font-size: 1em;
+                padding: 10px 15px;
+                min-width: unset; /* Remove min-width to allow more flexibility */
+                flex: 1; /* Distribute space evenly */
+            }
+            #channel-info {
+                font-size: 1.1em;
+                top: 10px;
+                max-width: 90%;
+            }
+            #channel-selector {
+                flex-direction: column; /* Stack input and button on small screens */
+            }
+            #channel-input {
+                width: 100%; /* Full width for input on small screens */
+                margin-bottom: 5px; /* Space between input and button */
+            }
+            #go-channel-btn {
+                width: 100%; /* Full width for button on small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="iniciar">Cargando canal...<br>Haga clic para iniciar</button>
+
+    <div id="tv-container">
+        <!-- Channel information display -->
+        <div id="channel-info"></div>
+
+        <video id="player" class="video-js vjs-default-skin" controls autoplay></video>
+
+        <!-- Control overlay for volume and channel switching -->
+        <div id="controls-overlay">
+            <button id="vol-down" class="control-button"><i class="fas fa-volume-down"></i> Bajar Volumen</button>
+            <button id="vol-up" class="control-button"><i class="fas fa-volume-up"></i> Subir Volumen</button>
+            <button id="prev-channel" class="control-button"><i class="fas fa-backward"></i> Canal Anterior</button>
+            <button id="next-channel" class="control-button"><i class="fas fa-forward"></i> Siguiente Canal</button>
+
+            <div id="channel-selector">
+                <input type="number" id="channel-input" placeholder="No. Canal" min="1">
+                <button id="go-channel-btn">Ir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
+    <script>
+        const iniciarBtn = document.getElementById('iniciar');
+        const tvContainer = document.getElementById('tv-container');
+        const channelInfoDisplay = document.getElementById('channel-info');
+        const controlsOverlay = document.getElementById('controls-overlay');
+        const volUpBtn = document.getElementById('vol-up');
+        const volDownBtn = document.getElementById('vol-down');
+        const nextChannelBtn = document.getElementById('next-channel');
+        const prevChannelBtn = document.getElementById('prev-channel');
+        const channelInput = document.getElementById('channel-input');
+        const goChannelBtn = document.getElementById('go-channel-btn');
+
+        const player = videojs('player');
+        let channels = [];
+        let currentChannelIndex = 0;
+        let controlsTimeout; // To manage controls visibility timeout
+
+        // Contenido M3U codificado, con la URL de Cristovisión actualizada y de primero
+        const m3uContent = `#EXTM3U
+#EXTINF:-1 tvg-id="Cristovision.co" tvg-logo="https://i.imgur.com/XIhCUY9.png" group-title="Religious",Cristovisión (New Source)
+https://5fc584f3f19c9.streamlock.net/cristovision/videocristovision/chunklist_w224829612_DVR.m3u8
+#EXTINF:-1 tvg-id="AnimeZoneTV.do" tvg-logo="https://i.imgur.com/AHaXlCh.png" group-title="Animation",Anime Zone TV (480p)
+http://animezonetv.net/hls/stream.m3u8
+#EXTINF:-1 tvg-id="AvivamientoTV.co" tvg-logo="https://i.imgur.com/MsQLaQG.png" group-title="Religious",Avivamiento TV (1080p) [Not 24/7]
+https://s1.abntelevision.com/avivamientoabr/stream/avivamientohd/avivamientohd/playlist.m3u8
+#EXTINF:-1 tvg-id="CanalVisionDorada.co" tvg-logo="https://i.imgur.com/TerY4iM.png" group-title="General",Bum Televisión (720p) [Not 24/7]
+https://movil.ejeserver.com/live/visiondorada.m3u8
+#EXTINF:-1 tvg-id="Cablenoticias.co" tvg-logo="https://i.imgur.com/FfhOGR9.png" group-title="News",Cablenoticias (1080p)
+https://rcntv-rcnmas-1-us.plex.wurl.tv/playlist.m3u8
+#EXTINF:-1 tvg-id="CaliTV.co" tvg-logo="https://i.imgur.com/2312Luq.png" group-title="Undefined",Cali TV (540p) [Not 24/7]
+https://5ab772334c39c.streamlock.net/live-calitv/calitv1/playlist.m3u8
+#EXTINF:-1 tvg-id="Canal1.co" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Channel_1_%28Colombia%29_-_2017_logo.svg/512px-Channel_1_%28Colombia%29_-_2017_logo.svg.png" group-title="General",Canal 1 (1080p) [Geo-blocked]
+https://mdstrm.com/live-stream-playlist/5a5e1c2568b1910913db5fe2.m3u8
+#EXTINF:-1 tvg-id="Canal2AlpavisionNeiva.co" tvg-logo="https://i.imgur.com/Yv8XIGW.png" group-title="General",Canal 2 Alpavisión Neiva (720p) [Not 24/7]
+https://stmv1.voxtvhd.com.br/alpavision/alpavision/playlist.m3u8
+#EXTINF:-1 tvg-id="Canal8TVPlus.co" tvg-logo="https://i.imgur.com/peOIG1F.png" group-title="General",Canal 8 TV+ (720p)
+https://movil.ejeserver.com/live/canal8tv.m3u8
+#EXTINF:-1 tvg-id="Canal9.co" tvg-logo="https://i.imgur.com/w5e1d8k.png" group-title="General",Canal 9 Cosespu (720p)
+https://video2.lhdserver.es/canal9cosespu/live.m3u8
+#EXTINF:-1 tvg-id="Canal10SOLTV.co" tvg-logo="https://i.imgur.com/kAbrHqt.jpeg" group-title="General",Canal 10 SOL TV (1080p)
+http://190.211.140.89:8081/SVTranscoder/SOLTVabr.stream/playlist.m3u8
+#EXTINF:-1 tvg-id="Canal14Codazzi.co" tvg-logo="https://i.imgur.com/wNSUMhJ.png" group-title="Entertainment",Canal 14 Codazzi (720p) [Not 24/7]
+http://185.189.225.150:85/nickelodeon/index.m3u8
+#EXTINF:-1 tvg-id="Canal55TelemoriscoTV.co" tvg-logo="https://i.imgur.com/9BwZyhM.jpg" group-title="General",Canal 55 Telemorisco TV (720p)
+http://canal.mediaserver.com.co/live/telemorisco.m3u8
+#EXTINF:-1 tvg-id="CanalCapital.co" tvg-logo="https://i.imgur.com/zAYtbYi.png" group-title="General",Canal Capital (720p)
+https://live.sdfgnksbounce.com:9092/MTc5LjYzLjE4OS41/114_.m3u8?token=6WMkfhZo8vSeZB6dB2gJqg&expires=1749384957
+#EXTINF:-1 tvg-id="CanalDos.co" tvg-logo="https://i.imgur.com/BYsyNHZ.jpg" group-title="Undefined",Canal Dos Yopal (720p)
+http://131.221.41.94/hls/canal2.m3u8
+#EXTINF:-1 tvg-id="CanalMasTelevision.co" tvg-logo="https://i.imgur.com/ODMa27W.jpg" group-title="General",Canal Más Televisión (720p)
+https://movil.ejeserver.com/live/teledoradahd.m3u8
+#EXTINF:-1 tvg-id="CanalMundoVision.co" tvg-logo="https://i.imgur.com/zRqfJuj.png" group-title="General",Canal Mundo Visión (720p)
+https://movil.ejeserver.com/live/mundovisiontv.m3u8
+#EXTINF:-1 tvg-id="CanalNets.co" tvg-logo="https://i.imgur.com/edaAexc.png" group-title="Undefined",Canal Nets (720p) [Not 24/7]
+https://movil.ejeserver.com/live/nets.m3u8
+#EXTINF:-1 tvg-id="CanalOracionConSon.co" tvg-logo="https://i.imgur.com/rfnFqU3.png" group-title="Religious",Canal Oración Con Son (1080p)
+https://canal.mediaserver.com.co/live/oracionconson.m3u8
+#EXTINF:-1 tvg-id="CanalPyC.co@SD" tvg-logo="https://i.imgur.com/3qxBDhV.png" group-title="News",Canal PyC
+https://edge.teveo.net/live/AeAAAgAkAANqA1IAyADIUDAAAAGAAAAAAmg02rRAIAByAAAA/playlist.m3u8
+#EXTINF:-1 tvg-id="CanalTelefamilia.co" tvg-logo="https://i.imgur.com/D1s1Q3k.png" group-title="Religious",Canal Telefamilia (360p) [Not 24/7]
+https://stmv2.voxtvhd.com.br/telefamilia/telefamilia/playlist.m3u8
+#EXTINF:-1 tvg-id="CanalTRO.co" tvg-logo="https://i.imgur.com/bdBduvj.png" group-title="General" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160",Canal TRO (1080p)
+https://liveingesta118.cdnmedia.tv/canaltro2live/smil:live.smil/playlist.m3u8
+#EXTINF:-1 tvg-id="CanalTROPlus.co" tvg-logo="https://i.imgur.com/4lNPj9m.png" group-title="General" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160",Canal TRO Plus (1080p) [Geo-blocked]
+https://liveingesta118.cdnmedia.tv/canaltro2live/smil:troplus.smil/playlist.m3u8
+#EXTINF:-1 tvg-id="CAtv.pr" tvg-logo="https://caribbeanadvantage.com/images/CAtv-logo-512.png" group-title="General",Caribbean Advantage TV (1080p) [Not 24/7]
+https://video2.getstreamhosting.com:19360/8216/8216.m3u8
+#EXTINF:-1 tvg-id="CGTNSpanish.cn" tvg-logo="https://i.imgur.com/Poz3xfi.png" group-title="News",CGTN Español (1080p)
+https://espanol-livews.cgtn.com/hls/LSveOGBaBw41Ea7ukkVAUdKQ220802LSTexu6xAuFH8VZNBLE1ZNEa220802cd/playlist.m3u8
+#EXTINF:-1 tvg-id="ChampionTV.co" tvg-logo="https://i.imgur.com/A144MfR.png" group-title="Sports",Champion TV (1080p)
+https://canal.mediaserver.com.co/live/ChampionTv.m3u8
+#EXTINF:-1 tvg-id="Cinecanal.us" tvg-logo="https://comteco.com.bo/img/upload/canales/qvJQXi.png" group-title="Movies",Cinecanal
+https://cors-proxy.cooks.fyi/https://streamer1.nexgen.bz/CINECANAL/index.m3u8
+#EXTINF:-1 tvg-id="CiudadelaTV.co" tvg-logo="https://i.imgur.com/fXROn6g.jpg" group-title="General",CiudadelaTV (614p) [Not 24/7]
+https://cp.panelchs.com:1936/8096/8096/playlist.m3u8
+#EXTINF:-1 tvg-id="ClanInternacional.es" tvg-logo="https://i.imgur.com/03jFV68.png" group-title="Kids",Clan TVE Internacional (1080p)
+https://rtvelivestream.akamaized.net/rtvesec/int/clan_int_main.m3u8
+#EXTINF:-1 tvg-id="CNCHDOnline.co" tvg-logo="https://i.imgur.com/EOEtETt.png" group-title="General",CNC HD Online (1080p) [Geo-blocked]
+https://hvtraficonew.ddns.net/pastocnc6/cnc6/playlist.m3u8
+#EXTINF:-1 tvg-id="CNCPasto.co" tvg-logo="https://i.imgur.com/sFl4XOp.png" group-title="General",CNC Pasto (720p) [Geo-blocked]
+https://hvtraficonew.ddns.net/pastocnc9/cnc9/playlist.m3u8
+#EXTINF:-1 tvg-id="CNCSantanderdeQuilichao.co" tvg-logo="https://i.imgur.com/LNl2o9U.jpg" group-title="General",CNC Santander de Quilichao (480p)
+https://movil.ejeserver.com/live/cncsantander.m3u8
+#EXTINF:-1 tvg-id="Cosmovision.co" tvg-logo="https://i.imgur.com/QlvYfEJ.png" group-title="Undefined",Cosmovision (720p)
+https://videohls2.cosmovision.tv/hls/sd.m3u8
+#EXTINF:-1 tvg-id="CTV.co" tvg-logo="https://i.imgur.com/w35ICn7.png" group-title="Undefined",CTV Barranquilla (1080p) [Not 24/7]
+https://59a564764e2b6.streamlock.net/ctvbarranquilla/ctv/playlist.m3u8
+#EXTINF:-1 tvg-id="DePeliculaLatinAmerica.mx" tvg-logo="https://i.imgur.com/aksM8pa.png" group-title="Movies",De Película (576p)
+https://linear-354.frequency.stream/mt/studio/354/hls/master/playlist.m3u8
+#EXTINF:-1 tvg-id="DePeliculaPlus.mx" tvg-logo="https://i.imgur.com/MMhSmDK.png" group-title="Movies",De Película Plus (576p)
+https://linear-404.frequency.stream/mt/studio/404/hls/master/playlist.m3u8
+#EXTINF:-1 tvg-id="DistritoComedia.mx" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/DistritoComediaLOGO2018.png/512px-DistritoComediaLOGO2018.png" group-title="Comedy",Distrito Comedia (576p)
+https://linear-405.frequency.stream/mt/studio/405/hls/master/playlist.m3u8
+#EXTINF:-1 tvg-id="DW.de@Espanol" tvg-logo="https://i.imgur.com/8MRNFb9.png" group-title="News",DW Español (1080p)
+https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/index.m3u8
+#EXTINF:-1 tvg-id="Eduvision.co" tvg-logo="https://i.imgur.com/ppBdqel.png" group-title="Education",Eduvision (1080p)
+https://stmv3.voxtvhd.com.br/conex2/conex2/playlist.m3u8
+#EXTINF:-1 tvg-id="EnCasaTV.co" tvg-logo="https://i.imgur.com/xVBG3I6.jpeg" group-title="General",En Casa TV (1080p) [Not 24/7]
+https://cp.panelchs.com:1936/8112/8112/playlist.m3u8`;
+
+        // Función para cargar canales desde la cadena de contenido M3U
+        async function loadChannels() {
+            const lines = m3uContent.split('\n'); // Dividir el contenido en líneas individuales
+
+            let channelName = '';
+            lines.forEach(line => {
+                if (line.startsWith('#EXTINF')) {
+                    // Extraer el nombre del canal de la línea #EXTINF
+                    const match = line.match(/,(.*)$/);
+                    if (match) channelName = match[1].trim();
+                } else if (line.startsWith('http') && line.includes('.m3u8')) {
+                    // Si es una URL y termina con .m3u8, añadirla al array de canales
+                    channels.push({ name: channelName, url: line.trim() });
+                }
+            });
+
+            if (channels.length > 0) {
+                // Empezar a reproducir el primer canal si se encuentran canales
+                playChannel(currentChannelIndex);
+            } else {
+                iniciarBtn.textContent = 'No se encontraron canales válidos.';
+            }
+        }
+
+        // Función para mostrar la superposición de controles y la información del canal, y establecer un temporizador para ocultarlos
+        function showControls() {
+            clearTimeout(controlsTimeout); // Limpiar cualquier temporizador existente
+            controlsOverlay.classList.remove('hidden');
+            channelInfoDisplay.classList.remove('hidden');
+
+            // Establecer un nuevo temporizador para ocultar los controles después de 3 segundos de inactividad
+            controlsTimeout = setTimeout(() => {
+                controlsOverlay.classList.add('hidden');
+                channelInfoDisplay.classList.add('hidden');
+            }, 3000); // 3 segundos
+        }
+
+        // Función para reproducir un canal específico por su índice
+        function playChannel(index) {
+            // Asegurarse de que el índice esté dentro de los límites del array de canales
+            if (index < 0) {
+                index = channels.length - 1; // Volver al último canal
+            } else if (index >= channels.length) {
+                index = 0; // Volver al primer canal
+            }
+            currentChannelIndex = index; // Actualizar el índice del canal actual global
+
+            const channel = channels[currentChannelIndex];
+            if (channel) {
+                player.src({ src: channel.url, type: 'application/x-mpegURL' });
+                player.muted(false); // Asegurarse de que el audio no esté silenciado
+                player.play()
+                    .then(() => {
+                        // Actualizar la visualización de la información del canal con el número y nombre del canal
+                        channelInfoDisplay.textContent = `Canal: ${currentChannelIndex + 1} - ${channel.name}`;
+                        console.log(`Reproduciendo: ${channel.name} (${channel.url})`);
+                        showControls(); // Mostrar controles después de cambiar de canal
+                    })
+                    .catch(error => {
+                        // Manejar el rechazo de la promesa de reproducción (por ejemplo, se requiere un gesto del usuario)
+                        console.warn('La reproducción fue interrumpida o falló (puede necesitar un gesto del usuario):', error);
+                        channelInfoDisplay.textContent = `Canal: ${currentChannelIndex + 1} - ${channel.name} (Error al reproducir)`;
+                        // Si la reproducción automática falla, es posible que el usuario tenga que hacer clic en reproducir manualmente o interactuar
+                        // El oyente de errores a continuación manejará los errores reales de los medios para saltar
+                        showControls(); // Seguir mostrando controles para indicar error
+                    });
+            } else {
+                console.warn(`No se encontró ningún canal en el índice: ${index}`);
+                channelInfoDisplay.textContent = 'No hay canal disponible.';
+                showControls(); // Mostrar controles si no hay canal disponible
+            }
+        }
+
+        // Oyente de eventos para errores de reproducción de video (por ejemplo, transmisión no disponible)
+        player.on('error', () => {
+            console.error('Error al reproducir el canal actual. Saltando al siguiente...');
+            channelInfoDisplay.textContent = `Canal: ${currentChannelIndex + 1} - ${channels[currentChannelIndex]?.name} (Error)`;
+            // Incrementar el índice y probar el siguiente canal
+            currentChannelIndex = (currentChannelIndex + 1) % channels.length;
+            playChannel(currentChannelIndex);
+        });
+
+        // --- Funciones de control de volumen ---
+        function volumeUp() {
+            let currentVolume = player.volume();
+            if (currentVolume < 1) {
+                player.volume(Math.min(1, currentVolume + 0.1)); // Aumentar en 10%, máximo 1
+            }
+            console.log('Volumen:', player.volume());
+            showControls(); // Mostrar controles cuando cambia el volumen
+        }
+
+        function volumeDown() {
+            let currentVolume = player.volume();
+            if (currentVolume > 0) {
+                player.volume(Math.max(0, currentVolume - 0.1)); // Disminuir en 10%, mínimo 0
+            }
+            console.log('Volumen:', player.volume());
+            showControls(); // Mostrar controles cuando cambia el volumen
+        }
+
+        // --- Funciones de cambio de canal ---
+        function nextChannel() {
+            playChannel(currentChannelIndex + 1);
+            console.log('Siguiente canal...');
+        }
+
+        function prevChannel() {
+            playChannel(currentChannelIndex - 1);
+            console.log('Canal anterior...');
+        }
+
+        // --- Función de selección directa de canal ---
+        function selectChannel() {
+            const channelNumber = parseInt(channelInput.value, 10);
+            if (isNaN(channelNumber) || channelNumber < 1 || channelNumber > channels.length) {
+                channelInfoDisplay.textContent = `Número de canal inválido. Ingrese un número entre 1 y ${channels.length}.`;
+                console.warn('Número de canal inválido ingresado:', channelInput.value);
+                showControls(); // Mostrar controles para mostrar el mensaje de error
+                return;
+            }
+            playChannel(channelNumber - 1); // Ajustar para el índice basado en 0
+            channelInput.value = ''; // Limpiar la entrada después de la selección
+        }
+
+
+        // --- Oyentes de eventos para nuevos controles ---
+        volUpBtn.addEventListener('click', volumeUp);
+        volDownBtn.addEventListener('click', volumeDown);
+        nextChannelBtn.addEventListener('click', nextChannel);
+        prevChannelBtn.addEventListener('click', prevChannel);
+        goChannelBtn.addEventListener('click', selectChannel);
+        // Permitir presionar Enter en el campo de entrada para seleccionar el canal
+        channelInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                selectChannel();
+            }
+        });
+
+        // Oyentes de eventos para mostrar controles en la interacción del usuario
+        tvContainer.addEventListener('mousemove', showControls);
+        tvContainer.addEventListener('touchend', showControls);
+
+        // Deshabilitar el comportamiento predeterminado de clic para reproducir/pausar de Video.js en el elemento de video
+        player.ready(function() {
+            this.off('click'); // Elimina el controlador de clic predeterminado en el elemento del reproductor
+            // Si el usuario aún quiere controlar la reproducción/pausa a través del área de video,
+            // necesitarían un botón o un gesto específico.
+            // Por ahora, los clics en el área de video no alternarán la reproducción/pausa.
+        });
+
+
+        // Controlador de clic inicial del botón 'Iniciar'
+        iniciarBtn.addEventListener('click', async () => {
+            iniciarBtn.style.display = 'none'; // Ocultar el botón de inicio
+            tvContainer.style.display = 'flex'; // Mostrar el contenedor de TV
+
+            await loadChannels(); // Cargar canales una vez que el usuario haga clic
+
+            // Solicitar pantalla completa para el elemento de video
+            const videoEl = document.querySelector('video');
+            if (videoEl.requestFullscreen) {
+                videoEl.requestFullscreen();
+            } else if (videoEl.webkitRequestFullscreen) { /* Safari */
+                videoEl.webkitRequestFullscreen();
+            } else if (videoEl.mozRequestFullScreen) { /* Firefox */
+                videoEl.mozRequestFullScreen();
+            } else if (videoEl.msRequestFullscreen) { /* IE11 */
+                videoEl.msRequestFullscreen();
+            }
+            showControls(); // Mostrar controles inicialmente después de iniciar
+        });
+
+        // Opcional: Controles de teclado para mayor comodidad
+        document.addEventListener('keydown', (event) => {
+            if (tvContainer.style.display === 'flex') { // Solo activo cuando la TV está visible
+                switch (event.key) {
+                    case 'ArrowUp':
+                        volumeUp();
+                        break;
+                    case 'ArrowDown':
+                        volumeDown();
+                        break;
+                    case 'ArrowRight':
+                        nextChannel();
+                        break;
+                    case 'ArrowLeft':
+                        prevChannel();
+                        break;
+                    case ' ': // Barra espaciadora para reproducir/pausar (aún permitida por teclado)
+                        if (player.paused()) {
+                            player.play();
+                        } else {
+                            player.pause();
+                        }
+                        showControls(); // Mostrar controles al usar el teclado para reproducir/pausar
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

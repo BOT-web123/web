@@ -1,513 +1,1382 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>TV Colombia</title>
-    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            background: black;
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif; /* Using Inter font */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            flex-direction: column; /* Allow content to stack vertically */
-        }
-        #iniciar {
-            font-size: 1.5em;
-            background: none;
-            border: 2px solid white;
-            padding: 1em 2em;
-            color: white;
-            cursor: pointer;
-            border-radius: 10px; /* Rounded corners */
-            transition: background-color 0.3s, color 0.3s, transform 0.2s;
-        }
-        #iniciar:hover {
-            background-color: white;
-            color: black;
-            transform: scale(1.05);
-        }
-        #tv-container {
-            display: none;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative; /* For absolute positioning of controls */
-            overflow: hidden; /* Ensure content doesn't spill out */
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* Ensure video fits within the player without cropping */
-            pointer-events: auto; /* Allow interaction with the video element itself if needed for VJS controls */
-        }
-        #controls-overlay, #channel-info {
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-            opacity: 1;
-            visibility: visible;
-        }
-        #controls-overlay.hidden, #channel-info.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none; /* Disable interaction when hidden */
-        }
-        #controls-overlay {
-            position: absolute;
-            bottom: 20px;
-            width: 90%;
-            max-width: 600px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 15px;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        .control-button {
-            background: #333;
-            border: none;
-            color: white;
-            padding: 12px 20px;
-            font-size: 1.2em;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: background-color 0.3s, transform 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex: 1; /* Distribute space evenly */
-            min-width: 120px; /* Ensure buttons don't get too small */
-        }
-        .control-button:hover {
-            background-color: #555;
-            transform: translateY(-2px);
-        }
-        .control-button i {
-            font-size: 1.3em;
-        }
-        #channel-info {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 1.4em;
-            font-weight: bold;
-            text-align: center;
-            white-space: nowrap; /* Prevent wrapping */
-            overflow: hidden; /* Hide overflow */
-            text-overflow: ellipsis; /* Add ellipsis if text overflows */
-            max-width: 80%; /* Limit width on smaller screens */
-        }
-        #channel-selector {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            margin-top: 10px; /* Space from other controls */
-            flex-basis: 100%; /* Take full width in the flex container */
-            justify-content: center;
-        }
-        #channel-input {
-            width: 80px;
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #555;
-            background-color: #222;
-            color: white;
-            font-size: 1em;
-            text-align: center;
-        }
-        #go-channel-btn {
-            padding: 8px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 1em;
-        }
-        #go-channel-btn:hover {
-            background-color: #0056b3;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lainux AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --sidebar:#171717;
+    --sidebar-hover:#212121;
+    --main:#212121;
+    --input-bg:#2f2f2f;
+    --border:#2e2e2e;
+    --text:#ececec;
+    --text-dim:#b4b4b4;
+    --text-faint:#8e8e8e;
+    --accent:#10a37f;
+    --accent-hover:#0d8a6c;
+    --pro:#e8a33d;
+    --extreme:#8b7cf6;
+    --danger:#ef5b6b;
+    --skeleton-base:#2a2a2a;
+    --skeleton-shine:#3a3a3a;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--main);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  button{font-family:inherit;cursor:pointer;}
+  ::selection{background:var(--accent);color:#04211d;}
+  .hidden{display:none !important;}
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            #iniciar {
-                font-size: 1.2em;
-                padding: 0.8em 1.5em;
-            }
-            #controls-overlay {
-                flex-direction: row; /* Keep row direction for controls */
-                bottom: 10px;
-                padding: 10px;
-                width: 95%;
-            }
-            .control-button {
-                font-size: 1em;
-                padding: 10px 15px;
-                min-width: unset; /* Remove min-width to allow more flexibility */
-                flex: 1; /* Distribute space evenly */
-            }
-            #channel-info {
-                font-size: 1.1em;
-                top: 10px;
-                max-width: 90%;
-            }
-            #channel-selector {
-                flex-direction: column; /* Stack input and button on small screens */
-            }
-            #channel-input {
-                width: 100%; /* Full width for input on small screens */
-                margin-bottom: 5px; /* Space between input and button */
-            }
-            #go-channel-btn {
-                width: 100%; /* Full width for button on small screens */
-            }
-        }
-    </style>
+  /* ---------------- SKELETON / LOADING PRIMITIVES ---------------- */
+  @keyframes shimmer{
+    0%{background-position:-300px 0;}
+    100%{background-position:300px 0;}
+  }
+  .skel{
+    background:linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 37%, var(--skeleton-base) 63%);
+    background-size:600px 100%;
+    animation:shimmer 1.4s ease-in-out infinite;
+    border-radius:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite;flex-shrink:0;}
+  .spinner.sm{width:14px;height:14px;border-width:2px;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+  .fadein{animation:fadein .18s ease-out;}
+
+  .btn-spinner{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  }
+
+  /* skeleton rows for sidebar conversation list */
+  .conv-skel{padding:9px 10px;margin-bottom:2px;}
+  .conv-skel .skel{height:13px;width:100%;}
+
+  /* skeleton for chat message bubbles while a response streams in */
+  .msg-skel{display:flex;flex-direction:column;gap:8px;padding-top:4px;max-width:420px;}
+  .msg-skel .skel{height:12px;}
+  .msg-skel .skel:nth-child(1){width:88%;}
+  .msg-skel .skel:nth-child(2){width:95%;}
+  .msg-skel .skel:nth-child(3){width:60%;}
+
+  /* skeleton gallery cell used inline in chat for image generation */
+  .img-skel{
+    width:220px;max-width:100%;aspect-ratio:1/1;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;
+    color:var(--text-faint);font-size:12.5px;
+    position:relative;
+  }
+
+  /* ---------------- AUTH SCREEN ---------------- */
+  #auth-screen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    padding:20px;
+  }
+  .auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:30px;font-size:22px;font-weight:700;}
+  .logo-mark{
+    width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(135deg, var(--accent), var(--extreme));
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;
+  }
+  .auth-card{
+    width:100%;max-width:380px;background:#171717;border:1px solid var(--border);border-radius:16px;padding:32px;
+  }
+  .auth-card h1{font-size:22px;margin:0 0 6px;text-align:center;}
+  .auth-card .sub{color:var(--text-faint);font-size:13.5px;text-align:center;margin:0 0 26px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;color:var(--text-dim);margin-bottom:6px;font-weight:500;}
+  .field input{
+    width:100%;background:#0d0d0d;border:1px solid var(--border);border-radius:10px;
+    padding:11px 13px;color:var(--text);font-size:14px;outline:none;
+  }
+  .field input:focus{border-color:var(--accent);}
+  .btn{
+    border:none;background:var(--input-bg);color:var(--text);
+    padding:11px 18px;border-radius:10px;font-size:14px;font-weight:600;transition:.15s ease;
+    border:1px solid var(--border);
+  }
+  .btn:hover{background:var(--sidebar-hover);}
+  .btn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn-accent:hover{background:var(--accent-hover);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+  .btn-full{width:100%;padding:12px;font-size:14.5px;}
+  .btn-danger{background:transparent;border-color:rgba(239,91,107,.4);color:var(--danger);}
+  .btn-danger:hover{background:rgba(239,91,107,.1);}
+  .auth-error{
+    background:rgba(239,91,107,.1);border:1px solid rgba(239,91,107,.3);color:#ff8f9c;
+    font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:16px;display:none;
+  }
+  .auth-switch{text-align:center;font-size:13.5px;color:var(--text-faint);margin-top:20px;}
+  .auth-switch a{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none;}
+  .auth-footer{margin-top:26px;color:var(--text-faint);font-size:12px;text-align:center;}
+
+  /* full-page loading veil while we resolve an existing session on load */
+  #boot-loader{
+    position:fixed;inset:0;background:var(--main);display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:14px;z-index:999;
+  }
+  #boot-loader .logo-mark{width:44px;height:44px;font-size:20px;}
+
+  /* ---------------- APP SHELL ---------------- */
+  .app-shell{display:flex;height:100vh;overflow:hidden;}
+
+  .sidebar{
+    width:260px;background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0;
+    transition:width .15s ease;
+  }
+  .sidebar-top{padding:10px;}
+  .sidebar-brand{display:flex;align-items:center;gap:8px;padding:8px 6px 14px;font-weight:700;font-size:15px;}
+  .new-chat-btn{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    background:transparent;border:1px solid var(--border);color:var(--text);
+    padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:500;
+  }
+  .new-chat-btn:hover{background:var(--sidebar-hover);}
+  .new-chat-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .nav-section{padding:6px 10px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;
+    color:var(--text-dim);font-size:13.5px;font-weight:500;margin-bottom:2px;
+  }
+  .nav-item:hover{background:var(--sidebar-hover);color:var(--text);}
+  .nav-item.active{background:var(--sidebar-hover);color:var(--text);}
+
+  .conv-list{flex:1;overflow-y:auto;padding:6px 10px;}
+  .conv-label{color:var(--text-faint);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:14px 8px 6px;}
+  .conv-item{
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    padding:9px 10px;border-radius:8px;color:var(--text-dim);font-size:13.5px;margin-bottom:2px;cursor:pointer;
+    white-space:nowrap;overflow:hidden;
+  }
+  .conv-item span.title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+  .conv-item:hover{background:var(--sidebar-hover);color:var(--text);}
+  .conv-item.active{background:var(--sidebar-hover);color:var(--text);}
+  .conv-del{opacity:0;background:none;border:none;color:var(--text-faint);font-size:14px;padding:2px 4px;flex-shrink:0;}
+  .conv-item:hover .conv-del{opacity:1;}
+  .conv-del:hover{color:var(--danger);}
+  .conv-del:disabled{opacity:.4;cursor:not-allowed;}
+  .conv-empty{color:var(--text-faint);font-size:12.5px;padding:10px 8px;}
+
+  .sidebar-bottom{border-top:1px solid var(--border);padding:8px;}
+  .user-row{
+    display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;
+  }
+  .user-row:hover{background:var(--sidebar-hover);}
+  .avatar{
+    width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;flex-shrink:0;
+  }
+  .user-meta{overflow:hidden;flex:1;}
+  .user-email{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .user-plan{font-size:11px;color:var(--text-faint);text-transform:capitalize;}
+  .logout-link{font-size:12.5px;color:var(--text-faint);padding:8px 10px;display:block;}
+  .logout-link:hover{color:var(--text);}
+
+  /* ---------------- MAIN CHAT AREA ---------------- */
+  .main-area{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--main);}
+  .main-top{
+    display:flex;align-items:center;justify-content:space-between;padding:12px 20px;
+    font-size:14px;font-weight:600;color:var(--text-dim);
+  }
+  .plan-badge{
+    font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+    padding:4px 10px;border-radius:100px;background:var(--sidebar-hover);color:var(--text-faint);
+  }
+  .plan-badge.pro{color:var(--pro);}
+  .plan-badge.extreme{color:var(--extreme);}
+
+  .view{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+  #chat-log-wrap{flex:1;overflow-y:auto;}
+  #chat-log{max-width:760px;margin:0 auto;padding:30px 20px 10px;display:flex;flex-direction:column;gap:26px;}
+  .empty-state{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-faint);
+  }
+  .empty-state .logo-mark{width:52px;height:52px;font-size:24px;}
+  .empty-state h2{font-size:20px;color:var(--text);margin:0;font-weight:600;}
+  .empty-state .hint-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:480px;margin-top:6px;}
+  .hint-chip{
+    font-size:12.5px;color:var(--text-dim);background:var(--sidebar-hover);border:1px solid var(--border);
+    border-radius:100px;padding:6px 12px;
+  }
+
+  /* skeleton state shown while opening a saved conversation */
+  .conv-loading{max-width:760px;margin:0 auto;padding:30px 20px;display:flex;flex-direction:column;gap:26px;width:100%;}
+  .conv-loading .msg-row{display:flex;gap:14px;}
+  .conv-loading .skel.avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;}
+
+  .msg-row{display:flex;gap:14px;max-width:100%;}
+  .msg-row .avatar{margin-top:2px;}
+  .msg-row.assistant .avatar{background:linear-gradient(135deg, var(--accent), var(--extreme));}
+  .msg-body{flex:1;line-height:1.65;font-size:15px;white-space:pre-wrap;padding-top:3px;}
+  .msg-row.user{flex-direction:row-reverse;}
+  .msg-row.user .msg-body{
+    background:var(--input-bg);border-radius:16px;padding:10px 16px;flex:0 1 auto;max-width:70%;white-space:pre-wrap;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .msg-row.user{justify-content:flex-start;}
+  .msg-text{white-space:pre-wrap;}
+
+  .msg-attachments{display:flex;flex-wrap:wrap;gap:6px;}
+  .msg-attachments img{max-width:200px;max-height:200px;border-radius:10px;display:block;object-fit:cover;}
+  .msg-attachments .file-chip{
+    display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);
+    border-radius:10px;padding:6px 10px;font-size:12.5px;color:var(--text-dim);
+  }
+
+  .msg-image-result img{max-width:280px;max-height:280px;border-radius:14px;display:block;margin-top:8px;}
+
+  .typing-dots{display:flex;gap:4px;padding:6px 0;}
+  .typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--text-faint);animation:blink 1.2s infinite;}
+  .typing-dots span:nth-child(2){animation-delay:.2s;}
+  .typing-dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+
+  .composer{padding:16px 20px 22px;}
+  .composer-inner{max-width:760px;margin:0 auto;}
+
+  .attach-preview-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .attach-preview{
+    position:relative;width:56px;height:56px;border-radius:10px;overflow:hidden;background:var(--input-bg);
+    border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  }
+  .attach-preview img{width:100%;height:100%;object-fit:cover;}
+  .attach-preview .file-ico{font-size:11px;color:var(--text-faint);text-align:center;padding:2px;}
+  .attach-preview .remove-attach{
+    position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.65);
+    color:#fff;border:none;font-size:10px;display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .attach-preview.uploading::after{
+    content:'';position:absolute;inset:0;background:rgba(0,0,0,.35);
+  }
+  .attach-preview .up-spinner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+
+  .input-pill{
+    display:flex;align-items:flex-end;gap:6px;background:var(--input-bg);border:1px solid var(--border);
+    border-radius:26px;padding:8px 8px 8px 8px;
+  }
+  .icon-btn{
+    width:36px;height:36px;border-radius:50%;background:transparent;border:none;color:var(--text-dim);
+    display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;
+  }
+  .icon-btn:hover{background:var(--sidebar-hover);color:var(--text);}
+  .icon-btn:disabled{opacity:.4;cursor:not-allowed;background:transparent;}
+  .mode-toggle{
+    display:flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--border);color:var(--text-dim);
+    border-radius:100px;padding:7px 12px 7px 10px;font-size:12.5px;font-weight:600;flex-shrink:0;white-space:nowrap;
+  }
+  .mode-toggle:hover{background:var(--sidebar-hover);}
+  .mode-toggle.on{color:var(--accent);border-color:rgba(16,163,127,.5);background:rgba(16,163,127,.08);}
+  .input-pill textarea{
+    flex:1;resize:none;background:transparent;border:none;color:var(--text);font-size:15px;
+    font-family:inherit;outline:none;max-height:160px;line-height:1.5;padding:8px 4px;
+  }
+  .send-btn{
+    width:34px;height:34px;border-radius:50%;background:var(--text);color:var(--main);border:none;
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+  .send-btn:disabled{background:var(--border);color:var(--text-faint);cursor:not-allowed;}
+  .composer-hint{text-align:center;color:var(--text-faint);font-size:11.5px;margin-top:10px;}
+
+  .usage-strip{
+    max-width:760px;margin:0 auto;display:flex;gap:8px;padding:0 4px 10px;flex-wrap:wrap;
+  }
+  .usage-chip{
+    font-size:11.5px;color:var(--text-faint);background:var(--sidebar-hover);border-radius:100px;padding:4px 10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .usage-chip b{color:var(--text-dim);}
+  .usage-chip.skel-chip{width:110px;height:22px;padding:0;}
+
+  .limit-banner{
+    max-width:760px;margin:0 auto 10px;background:rgba(239,91,107,.08);border:1px solid rgba(239,91,107,.3);color:#ff8f9c;
+    padding:10px 14px;border-radius:12px;font-size:13px;
+  }
+
+  /* ---------------- ATTACH MENU (hamburguesa para adjuntar) ---------------- */
+  .attach-menu-wrap{position:relative;}
+  .attach-menu{
+    position:absolute;bottom:46px;left:0;background:#2a2a2a;border:1px solid var(--border);border-radius:14px;
+    padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:20;
+  }
+  .attach-menu-item{
+    display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:13.5px;color:var(--text);
+    background:transparent;border:none;width:100%;text-align:left;
+  }
+  .attach-menu-item:hover{background:var(--sidebar-hover);}
+  .attach-menu-item .ico{font-size:16px;width:18px;text-align:center;}
+
+  /* cancel button overlay on the image generation skeleton */
+  .img-skel .cancel-gen-btn{
+    margin-top:4px;background:transparent;border:1px solid var(--border);color:var(--text-dim);
+    border-radius:100px;padding:5px 12px;font-size:11.5px;font-weight:600;
+  }
+  .img-skel .cancel-gen-btn:hover{background:rgba(239,91,107,.12);color:var(--danger);border-color:rgba(239,91,107,.4);}
+
+  /* ---------------- PLAN VIEW (ahora vive dentro del perfil) ---------------- */
+  #plan-view{padding:36px 24px;overflow-y:auto;}
+  #plan-view .inner{max-width:920px;margin:0 auto;}
+  #plan-view h2{margin:0 0 6px;font-size:24px;}
+  #plan-view .sub{color:var(--text-faint);margin:0 0 30px;font-size:14px;}
+  .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .plan-card{background:var(--sidebar);border:1px solid var(--border);border-radius:16px;padding:26px;display:flex;flex-direction:column;position:relative;}
+  .plan-card.current{border-color:var(--accent);}
+  .plan-tag{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:100px;margin-bottom:14px;background:var(--sidebar-hover);color:var(--text-faint);}
+  .plan-tag.pro{color:var(--pro);}
+  .plan-tag.extreme{color:var(--extreme);}
+  .plan-card h3{font-size:18px;margin:0 0 4px;}
+  .plan-price{font-size:30px;font-weight:700;margin:8px 0 18px;}
+  .plan-price small{font-size:13px;color:var(--text-faint);font-weight:500;}
+  .plan-list{list-style:none;padding:0;margin:0 0 22px;flex:1;}
+  .plan-list li{color:var(--text-dim);font-size:13.5px;margin-bottom:9px;padding-left:20px;position:relative;line-height:1.4;}
+  .plan-list li::before{content:"✓";position:absolute;left:0;color:var(--accent);font-weight:700;}
+  .plan-skel-card{background:var(--sidebar);border:1px solid var(--border);border-radius:16px;padding:26px;}
+
+  /* ---------------- PROFILE MODAL ---------------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;
+    z-index:100;padding:20px;
+  }
+  .profile-modal{
+    width:100%;max-width:960px;max-height:86vh;background:var(--main);border:1px solid var(--border);border-radius:18px;
+    display:flex;overflow:hidden;
+  }
+  .profile-tabs{width:210px;background:var(--sidebar);flex-shrink:0;padding:16px 10px;border-right:1px solid var(--border);}
+  .profile-tabs h3{font-size:13px;color:var(--text-faint);padding:0 8px 12px;margin:0;font-weight:600;}
+  .ptab{
+    display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;color:var(--text-dim);font-size:13.5px;
+    font-weight:500;margin-bottom:2px;
+  }
+  .ptab:hover{background:var(--sidebar-hover);color:var(--text);}
+  .ptab.active{background:var(--sidebar-hover);color:var(--text);}
+  .profile-content{flex:1;overflow-y:auto;padding:26px 30px;position:relative;}
+  .profile-close{
+    position:absolute;top:16px;right:18px;width:30px;height:30px;border-radius:50%;background:var(--sidebar-hover);
+    border:none;color:var(--text-dim);font-size:15px;display:flex;align-items:center;justify-content:center;
+  }
+  .profile-close:hover{color:var(--text);}
+  .profile-section-title{font-size:20px;font-weight:600;margin:0 0 4px;}
+  .profile-section-sub{color:var(--text-faint);font-size:13.5px;margin:0 0 26px;}
+  .account-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+  .account-row .avatar{width:44px;height:44px;font-size:17px;}
+  .account-row .info{flex:1;}
+  .account-row .info .label{font-size:12px;color:var(--text-faint);}
+  .account-row .info .value{font-size:14.5px;font-weight:500;}
+
+  @media (max-width:880px){
+    .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:40;transform:translateX(-100%);}
+    .sidebar.open{transform:translateX(0);}
+    .pricing{grid-template-columns:1fr;}
+    .msg-row.user .msg-body{max-width:85%;}
+    .profile-modal{flex-direction:column;max-height:92vh;}
+    .profile-tabs{width:100%;border-right:none;border-bottom:1px solid var(--border);display:flex;gap:4px;padding:10px;overflow-x:auto;}
+    .profile-tabs h3{display:none;}
+    .ptab{white-space:nowrap;}
+  }
+</style>
 </head>
 <body>
-    <button id="iniciar">Cargando canal...<br>Haga clic para iniciar</button>
 
-    <div id="tv-container">
-        <!-- Channel information display -->
-        <div id="channel-info"></div>
+<!-- ===================== BOOT LOADER (checking existing session) ===================== -->
+<div id="boot-loader">
+  <div class="logo-mark">L</div>
+  <div class="spinner"></div>
+</div>
 
-        <video id="player" class="video-js vjs-default-skin" controls autoplay></video>
+<!-- ===================== AUTH SCREEN ===================== -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-logo"><div class="logo-mark">L</div>Lainux AI</div>
+  <div class="auth-card">
+    <h1 id="auth-title">Crea tu cuenta</h1>
+    <p class="sub" id="auth-sub">Regístrate para empezar a chatear y generar imágenes.</p>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="field">
+      <label>Correo electrónico</label>
+      <input type="email" id="auth-email" placeholder="tucorreo@ejemplo.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="auth-password" placeholder="Mínimo 6 caracteres" autocomplete="current-password">
+    </div>
+    <button class="btn btn-accent btn-full" id="auth-submit" onclick="submitAuth()">Crear cuenta</button>
+    <div class="auth-switch" id="auth-switch">
+      ¿Ya tienes cuenta? <a onclick="setAuthMode('login')">Inicia sesión</a>
+    </div>
+  </div>
+  <div class="auth-footer">Lainux AI — creada por Víctor Polo. Todos los derechos reservados © 2026.</div>
+</div>
 
-        <!-- Control overlay for volume and channel switching -->
-        <div id="controls-overlay">
-            <button id="vol-down" class="control-button"><i class="fas fa-volume-down"></i> Bajar Volumen</button>
-            <button id="vol-up" class="control-button"><i class="fas fa-volume-up"></i> Subir Volumen</button>
-            <button id="prev-channel" class="control-button"><i class="fas fa-backward"></i> Canal Anterior</button>
-            <button id="next-channel" class="control-button"><i class="fas fa-forward"></i> Siguiente Canal</button>
-
-            <div id="channel-selector">
-                <input type="number" id="channel-input" placeholder="No. Canal" min="1">
-                <button id="go-channel-btn">Ir</button>
-            </div>
+<!-- ===================== APP SHELL ===================== -->
+<div id="app-shell" class="app-shell hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand"><div class="logo-mark">L</div>Lainux AI</div>
+      <button class="new-chat-btn" id="new-chat-btn" onclick="startNewConversation()">＋ Nuevo chat</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-item active" id="nav-chat" onclick="switchView('chat')">💬 &nbsp;Chat</div>
+    </div>
+    <div class="conv-list" id="conv-list">
+      <div class="conv-label">Chats</div>
+      <div class="conv-skel"><div class="skel" style="height:13px;"></div></div>
+      <div class="conv-skel"><div class="skel" style="height:13px;width:80%;"></div></div>
+      <div class="conv-skel"><div class="skel" style="height:13px;width:60%;"></div></div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-row" onclick="openProfileModal()">
+        <div class="avatar" id="avatar-letter">U</div>
+        <div class="user-meta">
+          <div class="user-email" id="user-email">usuario@correo.com</div>
+          <div class="user-plan" id="user-plan-label">free</div>
         </div>
+      </div>
+      <a class="logout-link" onclick="logout()">Cerrar sesión</a>
+      <a class="logout-link" style="opacity:.6;">Lainux AI · creada por Víctor Polo</a>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <div class="main-top">
+      <div id="view-title">Lainux AI</div>
+      <div class="plan-badge" id="plan-badge">···</div>
     </div>
 
-    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
-    <script>
-        const iniciarBtn = document.getElementById('iniciar');
-        const tvContainer = document.getElementById('tv-container');
-        const channelInfoDisplay = document.getElementById('channel-info');
-        const controlsOverlay = document.getElementById('controls-overlay');
-        const volUpBtn = document.getElementById('vol-up');
-        const volDownBtn = document.getElementById('vol-down');
-        const nextChannelBtn = document.getElementById('next-channel');
-        const prevChannelBtn = document.getElementById('prev-channel');
-        const channelInput = document.getElementById('channel-input');
-        const goChannelBtn = document.getElementById('go-channel-btn');
+    <!-- CHAT VIEW -->
+    <div id="chat-view" class="view">
+      <div id="chat-log-wrap">
+        <div id="empty-state" class="empty-state">
+          <div class="logo-mark">L</div>
+          <h2>¿En qué puedo ayudarte hoy?</h2>
+          <div class="hint-row">
+            <span class="hint-chip">🎨 Pídeme que genere una imagen</span>
+            <span class="hint-chip">📎 Adjunta un archivo o foto</span>
+            <span class="hint-chip">💬 Pregúntame lo que quieras</span>
+          </div>
+        </div>
+        <div id="conv-loading-skel" class="conv-loading hidden">
+          <div class="msg-row">
+            <div class="skel avatar"></div>
+            <div class="msg-skel"><div class="skel"></div><div class="skel"></div></div>
+          </div>
+          <div class="msg-row">
+            <div class="skel avatar"></div>
+            <div class="msg-skel"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+          </div>
+        </div>
+        <div id="chat-log" class="hidden"></div>
+      </div>
 
-        const player = videojs('player');
-        let channels = [];
-        let currentChannelIndex = 0;
-        let controlsTimeout; // To manage controls visibility timeout
+      <div id="img-limit-banner"></div>
 
-        // Contenido M3U codificado, con la URL de Cristovisión actualizada y de primero
-        const m3uContent = `#EXTM3U
-#EXTINF:-1 tvg-id="Cristovision.co" tvg-logo="https://i.imgur.com/XIhCUY9.png" group-title="Religious",Cristovisión (New Source)
-https://5fc584f3f19c9.streamlock.net/cristovision/videocristovision/chunklist_w224829612_DVR.m3u8
-#EXTINF:-1 tvg-id="AnimeZoneTV.do" tvg-logo="https://i.imgur.com/AHaXlCh.png" group-title="Animation",Anime Zone TV (480p)
-http://animezonetv.net/hls/stream.m3u8
-#EXTINF:-1 tvg-id="AvivamientoTV.co" tvg-logo="https://i.imgur.com/MsQLaQG.png" group-title="Religious",Avivamiento TV (1080p) [Not 24/7]
-https://s1.abntelevision.com/avivamientoabr/stream/avivamientohd/avivamientohd/playlist.m3u8
-#EXTINF:-1 tvg-id="CanalVisionDorada.co" tvg-logo="https://i.imgur.com/TerY4iM.png" group-title="General",Bum Televisión (720p) [Not 24/7]
-https://movil.ejeserver.com/live/visiondorada.m3u8
-#EXTINF:-1 tvg-id="Cablenoticias.co" tvg-logo="https://i.imgur.com/FfhOGR9.png" group-title="News",Cablenoticias (1080p)
-https://rcntv-rcnmas-1-us.plex.wurl.tv/playlist.m3u8
-#EXTINF:-1 tvg-id="CaliTV.co" tvg-logo="https://i.imgur.com/2312Luq.png" group-title="Undefined",Cali TV (540p) [Not 24/7]
-https://5ab772334c39c.streamlock.net/live-calitv/calitv1/playlist.m3u8
-#EXTINF:-1 tvg-id="Canal1.co" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Channel_1_%28Colombia%29_-_2017_logo.svg/512px-Channel_1_%28Colombia%29_-_2017_logo.svg.png" group-title="General",Canal 1 (1080p) [Geo-blocked]
-https://mdstrm.com/live-stream-playlist/5a5e1c2568b1910913db5fe2.m3u8
-#EXTINF:-1 tvg-id="Canal2AlpavisionNeiva.co" tvg-logo="https://i.imgur.com/Yv8XIGW.png" group-title="General",Canal 2 Alpavisión Neiva (720p) [Not 24/7]
-https://stmv1.voxtvhd.com.br/alpavision/alpavision/playlist.m3u8
-#EXTINF:-1 tvg-id="Canal8TVPlus.co" tvg-logo="https://i.imgur.com/peOIG1F.png" group-title="General",Canal 8 TV+ (720p)
-https://movil.ejeserver.com/live/canal8tv.m3u8
-#EXTINF:-1 tvg-id="Canal9.co" tvg-logo="https://i.imgur.com/w5e1d8k.png" group-title="General",Canal 9 Cosespu (720p)
-https://video2.lhdserver.es/canal9cosespu/live.m3u8
-#EXTINF:-1 tvg-id="Canal10SOLTV.co" tvg-logo="https://i.imgur.com/kAbrHqt.jpeg" group-title="General",Canal 10 SOL TV (1080p)
-http://190.211.140.89:8081/SVTranscoder/SOLTVabr.stream/playlist.m3u8
-#EXTINF:-1 tvg-id="Canal14Codazzi.co" tvg-logo="https://i.imgur.com/wNSUMhJ.png" group-title="Entertainment",Canal 14 Codazzi (720p) [Not 24/7]
-http://185.189.225.150:85/nickelodeon/index.m3u8
-#EXTINF:-1 tvg-id="Canal55TelemoriscoTV.co" tvg-logo="https://i.imgur.com/9BwZyhM.jpg" group-title="General",Canal 55 Telemorisco TV (720p)
-http://canal.mediaserver.com.co/live/telemorisco.m3u8
-#EXTINF:-1 tvg-id="CanalCapital.co" tvg-logo="https://i.imgur.com/zAYtbYi.png" group-title="General",Canal Capital (720p)
-https://live.sdfgnksbounce.com:9092/MTc5LjYzLjE4OS41/114_.m3u8?token=6WMkfhZo8vSeZB6dB2gJqg&expires=1749384957
-#EXTINF:-1 tvg-id="CanalDos.co" tvg-logo="https://i.imgur.com/BYsyNHZ.jpg" group-title="Undefined",Canal Dos Yopal (720p)
-http://131.221.41.94/hls/canal2.m3u8
-#EXTINF:-1 tvg-id="CanalMasTelevision.co" tvg-logo="https://i.imgur.com/ODMa27W.jpg" group-title="General",Canal Más Televisión (720p)
-https://movil.ejeserver.com/live/teledoradahd.m3u8
-#EXTINF:-1 tvg-id="CanalMundoVision.co" tvg-logo="https://i.imgur.com/zRqfJuj.png" group-title="General",Canal Mundo Visión (720p)
-https://movil.ejeserver.com/live/mundovisiontv.m3u8
-#EXTINF:-1 tvg-id="CanalNets.co" tvg-logo="https://i.imgur.com/edaAexc.png" group-title="Undefined",Canal Nets (720p) [Not 24/7]
-https://movil.ejeserver.com/live/nets.m3u8
-#EXTINF:-1 tvg-id="CanalOracionConSon.co" tvg-logo="https://i.imgur.com/rfnFqU3.png" group-title="Religious",Canal Oración Con Son (1080p)
-https://canal.mediaserver.com.co/live/oracionconson.m3u8
-#EXTINF:-1 tvg-id="CanalPyC.co@SD" tvg-logo="https://i.imgur.com/3qxBDhV.png" group-title="News",Canal PyC
-https://edge.teveo.net/live/AeAAAgAkAANqA1IAyADIUDAAAAGAAAAAAmg02rRAIAByAAAA/playlist.m3u8
-#EXTINF:-1 tvg-id="CanalTelefamilia.co" tvg-logo="https://i.imgur.com/D1s1Q3k.png" group-title="Religious",Canal Telefamilia (360p) [Not 24/7]
-https://stmv2.voxtvhd.com.br/telefamilia/telefamilia/playlist.m3u8
-#EXTINF:-1 tvg-id="CanalTRO.co" tvg-logo="https://i.imgur.com/bdBduvj.png" group-title="General" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160",Canal TRO (1080p)
-https://liveingesta118.cdnmedia.tv/canaltro2live/smil:live.smil/playlist.m3u8
-#EXTINF:-1 tvg-id="CanalTROPlus.co" tvg-logo="https://i.imgur.com/4lNPj9m.png" group-title="General" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 CrKey/1.44.191160",Canal TRO Plus (1080p) [Geo-blocked]
-https://liveingesta118.cdnmedia.tv/canaltro2live/smil:troplus.smil/playlist.m3u8
-#EXTINF:-1 tvg-id="CAtv.pr" tvg-logo="https://caribbeanadvantage.com/images/CAtv-logo-512.png" group-title="General",Caribbean Advantage TV (1080p) [Not 24/7]
-https://video2.getstreamhosting.com:19360/8216/8216.m3u8
-#EXTINF:-1 tvg-id="CGTNSpanish.cn" tvg-logo="https://i.imgur.com/Poz3xfi.png" group-title="News",CGTN Español (1080p)
-https://espanol-livews.cgtn.com/hls/LSveOGBaBw41Ea7ukkVAUdKQ220802LSTexu6xAuFH8VZNBLE1ZNEa220802cd/playlist.m3u8
-#EXTINF:-1 tvg-id="ChampionTV.co" tvg-logo="https://i.imgur.com/A144MfR.png" group-title="Sports",Champion TV (1080p)
-https://canal.mediaserver.com.co/live/ChampionTv.m3u8
-#EXTINF:-1 tvg-id="Cinecanal.us" tvg-logo="https://comteco.com.bo/img/upload/canales/qvJQXi.png" group-title="Movies",Cinecanal
-https://cors-proxy.cooks.fyi/https://streamer1.nexgen.bz/CINECANAL/index.m3u8
-#EXTINF:-1 tvg-id="CiudadelaTV.co" tvg-logo="https://i.imgur.com/fXROn6g.jpg" group-title="General",CiudadelaTV (614p) [Not 24/7]
-https://cp.panelchs.com:1936/8096/8096/playlist.m3u8
-#EXTINF:-1 tvg-id="ClanInternacional.es" tvg-logo="https://i.imgur.com/03jFV68.png" group-title="Kids",Clan TVE Internacional (1080p)
-https://rtvelivestream.akamaized.net/rtvesec/int/clan_int_main.m3u8
-#EXTINF:-1 tvg-id="CNCHDOnline.co" tvg-logo="https://i.imgur.com/EOEtETt.png" group-title="General",CNC HD Online (1080p) [Geo-blocked]
-https://hvtraficonew.ddns.net/pastocnc6/cnc6/playlist.m3u8
-#EXTINF:-1 tvg-id="CNCPasto.co" tvg-logo="https://i.imgur.com/sFl4XOp.png" group-title="General",CNC Pasto (720p) [Geo-blocked]
-https://hvtraficonew.ddns.net/pastocnc9/cnc9/playlist.m3u8
-#EXTINF:-1 tvg-id="CNCSantanderdeQuilichao.co" tvg-logo="https://i.imgur.com/LNl2o9U.jpg" group-title="General",CNC Santander de Quilichao (480p)
-https://movil.ejeserver.com/live/cncsantander.m3u8
-#EXTINF:-1 tvg-id="Cosmovision.co" tvg-logo="https://i.imgur.com/QlvYfEJ.png" group-title="Undefined",Cosmovision (720p)
-https://videohls2.cosmovision.tv/hls/sd.m3u8
-#EXTINF:-1 tvg-id="CTV.co" tvg-logo="https://i.imgur.com/w35ICn7.png" group-title="Undefined",CTV Barranquilla (1080p) [Not 24/7]
-https://59a564764e2b6.streamlock.net/ctvbarranquilla/ctv/playlist.m3u8
-#EXTINF:-1 tvg-id="DePeliculaLatinAmerica.mx" tvg-logo="https://i.imgur.com/aksM8pa.png" group-title="Movies",De Película (576p)
-https://linear-354.frequency.stream/mt/studio/354/hls/master/playlist.m3u8
-#EXTINF:-1 tvg-id="DePeliculaPlus.mx" tvg-logo="https://i.imgur.com/MMhSmDK.png" group-title="Movies",De Película Plus (576p)
-https://linear-404.frequency.stream/mt/studio/404/hls/master/playlist.m3u8
-#EXTINF:-1 tvg-id="DistritoComedia.mx" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/DistritoComediaLOGO2018.png/512px-DistritoComediaLOGO2018.png" group-title="Comedy",Distrito Comedia (576p)
-https://linear-405.frequency.stream/mt/studio/405/hls/master/playlist.m3u8
-#EXTINF:-1 tvg-id="DW.de@Espanol" tvg-logo="https://i.imgur.com/8MRNFb9.png" group-title="News",DW Español (1080p)
-https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/index.m3u8
-#EXTINF:-1 tvg-id="Eduvision.co" tvg-logo="https://i.imgur.com/ppBdqel.png" group-title="Education",Eduvision (1080p)
-https://stmv3.voxtvhd.com.br/conex2/conex2/playlist.m3u8
-#EXTINF:-1 tvg-id="EnCasaTV.co" tvg-logo="https://i.imgur.com/xVBG3I6.jpeg" group-title="General",En Casa TV (1080p) [Not 24/7]
-https://cp.panelchs.com:1936/8112/8112/playlist.m3u8`;
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="attach-preview-row hidden" id="attach-preview-row"></div>
+          <div class="input-pill">
+            <div class="attach-menu-wrap">
+              <button class="icon-btn" id="attach-menu-btn" title="Adjuntar" onclick="toggleAttachMenu(event)">☰</button>
+              <div class="attach-menu hidden" id="attach-menu">
+                <button class="attach-menu-item" onclick="closeAttachMenu();document.getElementById('file-input').click()"><span class="ico">📎</span> Subir archivo</button>
+                <button class="attach-menu-item" onclick="closeAttachMenu();document.getElementById('camera-input').click()"><span class="ico">📷</span> Tomar foto</button>
+              </div>
+            </div>
+            <input type="file" id="file-input" class="hidden" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.docx" onchange="handleFileSelect(event)">
+            <input type="file" id="camera-input" class="hidden" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
+            <button class="mode-toggle" id="image-mode-btn" title="Generar imagen con este mensaje" onclick="toggleImageMode()">🎨 Imagen</button>
+            <textarea id="chat-input" rows="1" placeholder="Escribe un mensaje a Lainux AI..."></textarea>
+            <button class="send-btn" onclick="sendMessage()" id="send-btn">↑</button>
+          </div>
+          <div class="composer-hint">Lainux AI puede cometer errores. Verifica la información importante.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        // Función para cargar canales desde la cadena de contenido M3U
-        async function loadChannels() {
-            const lines = m3uContent.split('\n'); // Dividir el contenido en líneas individuales
+<!-- ===================== PROFILE MODAL (planes viven aquí) ===================== -->
+<div id="profile-modal-overlay" class="modal-overlay hidden" onclick="if(event.target===this) closeProfileModal()">
+  <div class="profile-modal">
+    <div class="profile-tabs">
+      <h3>Perfil</h3>
+      <div class="ptab active" id="ptab-account" onclick="switchProfileTab('account')">👤 &nbsp;Cuenta</div>
+      <div class="ptab" id="ptab-plan" onclick="switchProfileTab('plan')">⭐ &nbsp;Planes</div>
+    </div>
+    <div class="profile-content">
+      <button class="profile-close" onclick="closeProfileModal()">✕</button>
 
-            let channelName = '';
-            lines.forEach(line => {
-                if (line.startsWith('#EXTINF')) {
-                    // Extraer el nombre del canal de la línea #EXTINF
-                    const match = line.match(/,(.*)$/);
-                    if (match) channelName = match[1].trim();
-                } else if (line.startsWith('http') && line.includes('.m3u8')) {
-                    // Si es una URL y termina con .m3u8, añadirla al array de canales
-                    channels.push({ name: channelName, url: line.trim() });
-                }
-            });
+      <div id="profile-tab-account">
+        <h2 class="profile-section-title">Tu cuenta</h2>
+        <p class="profile-section-sub">Información de tu cuenta en Lainux AI.</p>
+        <div class="account-row">
+          <div class="avatar" id="modal-avatar-letter">U</div>
+          <div class="info">
+            <div class="label">Correo</div>
+            <div class="value" id="modal-user-email">usuario@correo.com</div>
+          </div>
+        </div>
+        <div class="account-row">
+          <div class="info">
+            <div class="label">Plan actual</div>
+            <div class="value" id="modal-user-plan">Free</div>
+          </div>
+        </div>
+        <div class="account-row" style="border-bottom:none;">
+          <div class="info">
+            <div class="label">Imágenes disponibles</div>
+            <div class="value" id="modal-images-left">—</div>
+          </div>
+        </div>
+      </div>
 
-            if (channels.length > 0) {
-                // Empezar a reproducir el primer canal si se encuentran canales
-                playChannel(currentChannelIndex);
-            } else {
-                iniciarBtn.textContent = 'No se encontraron canales válidos.';
-            }
-        }
+      <div id="profile-tab-plan" class="hidden">
+        <div id="plan-view-inner">
+          <h2 class="profile-section-title">Tu plan</h2>
+          <p class="profile-section-sub">Gestiona tu suscripción de Lainux AI.</p>
+          <div class="pricing" id="pricing-cards">
+            <div class="plan-skel-card"><div class="skel" style="height:20px;width:60px;margin-bottom:16px;"></div><div class="skel" style="height:24px;width:100px;margin-bottom:10px;"></div><div class="skel" style="height:34px;width:80px;margin-bottom:20px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div></div>
+            <div class="plan-skel-card"><div class="skel" style="height:20px;width:60px;margin-bottom:16px;"></div><div class="skel" style="height:24px;width:100px;margin-bottom:10px;"></div><div class="skel" style="height:34px;width:80px;margin-bottom:20px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div></div>
+            <div class="plan-skel-card"><div class="skel" style="height:20px;width:60px;margin-bottom:16px;"></div><div class="skel" style="height:24px;width:100px;margin-bottom:10px;"></div><div class="skel" style="height:34px;width:80px;margin-bottom:20px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div><div class="skel" style="height:13px;margin-bottom:10px;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        // Función para mostrar la superposición de controles y la información del canal, y establecer un temporizador para ocultarlos
-        function showControls() {
-            clearTimeout(controlsTimeout); // Limpiar cualquier temporizador existente
-            controlsOverlay.classList.remove('hidden');
-            channelInfoDisplay.classList.remove('hidden');
+<script>
+/* ========================================================================
+   CONFIG
+   ======================================================================== */
+const SUPABASE_URL = 'https://xizbnymfpvxlgyqdviyx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WHjJUPJprQUf6pt3rUVc8g_YmHPo-AE';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // Establecer un nuevo temporizador para ocultar los controles después de 3 segundos de inactividad
-            controlsTimeout = setTimeout(() => {
-                controlsOverlay.classList.add('hidden');
-                channelInfoDisplay.classList.add('hidden');
-            }, 3000); // 3 segundos
-        }
+const EDGE_FUNCTION_URL = SUPABASE_URL + '/functions/v1/clever-task';
+const BILLING_FUNCTION_URL = SUPABASE_URL + '/functions/v1/billing';
+const UPLOAD_BUCKET = 'chat-uploads'; // bucket de Supabase Storage para adjuntos
 
-        // Función para reproducir un canal específico por su índice
-        function playChannel(index) {
-            // Asegurarse de que el índice esté dentro de los límites del array de canales
-            if (index < 0) {
-                index = channels.length - 1; // Volver al último canal
-            } else if (index >= channels.length) {
-                index = 0; // Volver al primer canal
-            }
-            currentChannelIndex = index; // Actualizar el índice del canal actual global
+// Único límite real: imágenes. Los mensajes de chat de texto ya no tienen tope.
+const PLAN_LIMITS = {
+  free:    { images: 10,     imagesWindowHours: 5 },
+  pro:     { images: 100,    imagesWindowHours: 5 },
+  extreme: { images: 999999, imagesWindowHours: 5 }
+};
 
-            const channel = channels[currentChannelIndex];
-            if (channel) {
-                player.src({ src: channel.url, type: 'application/x-mpegURL' });
-                player.muted(false); // Asegurarse de que el audio no esté silenciado
-                player.play()
-                    .then(() => {
-                        // Actualizar la visualización de la información del canal con el número y nombre del canal
-                        channelInfoDisplay.textContent = `Canal: ${currentChannelIndex + 1} - ${channel.name}`;
-                        console.log(`Reproduciendo: ${channel.name} (${channel.url})`);
-                        showControls(); // Mostrar controles después de cambiar de canal
-                    })
-                    .catch(error => {
-                        // Manejar el rechazo de la promesa de reproducción (por ejemplo, se requiere un gesto del usuario)
-                        console.warn('La reproducción fue interrumpida o falló (puede necesitar un gesto del usuario):', error);
-                        channelInfoDisplay.textContent = `Canal: ${currentChannelIndex + 1} - ${channel.name} (Error al reproducir)`;
-                        // Si la reproducción automática falla, es posible que el usuario tenga que hacer clic en reproducir manualmente o interactuar
-                        // El oyente de errores a continuación manejará los errores reales de los medios para saltar
-                        showControls(); // Seguir mostrando controles para indicar error
-                    });
-            } else {
-                console.warn(`No se encontró ningún canal en el índice: ${index}`);
-                channelInfoDisplay.textContent = 'No hay canal disponible.';
-                showControls(); // Mostrar controles si no hay canal disponible
-            }
-        }
+const PLAN_CARDS = [
+  { id:'free', name:'Free', price:'$0', period:'/ siempre', tagClass:'', features:['10 imágenes cada 5 horas','Mensajes de chat ilimitados','Acceso completo al chat'] },
+  { id:'pro', name:'Pro', price:'$5', period:'/ mes', tagClass:'pro', features:['100 imágenes cada 5 horas','Mensajes de chat ilimitados','Prioridad de generación'] },
+  { id:'extreme', name:'Extremo', price:'$10', period:'/ mes', tagClass:'extreme', features:['Imágenes prácticamente ilimitadas','Mensajes de chat ilimitados','Máxima prioridad'] }
+];
 
-        // Oyente de eventos para errores de reproducción de video (por ejemplo, transmisión no disponible)
-        player.on('error', () => {
-            console.error('Error al reproducir el canal actual. Saltando al siguiente...');
-            channelInfoDisplay.textContent = `Canal: ${currentChannelIndex + 1} - ${channels[currentChannelIndex]?.name} (Error)`;
-            // Incrementar el índice y probar el siguiente canal
-            currentChannelIndex = (currentChannelIndex + 1) % channels.length;
-            playChannel(currentChannelIndex);
-        });
+const MAX_ATTACHMENTS = 4;
+const IMAGE_GEN_MIN_MS = 5000; // duración mínima simulada de generación de imagen
 
-        // --- Funciones de control de volumen ---
-        function volumeUp() {
-            let currentVolume = player.volume();
-            if (currentVolume < 1) {
-                player.volume(Math.min(1, currentVolume + 0.1)); // Aumentar en 10%, máximo 1
-            }
-            console.log('Volumen:', player.volume());
-            showControls(); // Mostrar controles cuando cambia el volumen
-        }
+let currentUser = null;
+let profile = null;
+let authMode = 'signup';
+let currentConversationId = null;
+let chatHistory = []; // {role:'user'|'assistant', content:'', attachments?:[]}
+let pendingAttachments = []; // [{id, file, kind:'image'|'file', previewUrl, uploading, uploadedUrl, error}]
+let imageModeOn = false;
+let isSending = false;
+let currentImageGenController = null; // AbortController de la generación de imagen en curso
+let imageGenCancelled = false;
 
-        function volumeDown() {
-            let currentVolume = player.volume();
-            if (currentVolume > 0) {
-                player.volume(Math.max(0, currentVolume - 0.1)); // Disminuir en 10%, mínimo 0
-            }
-            console.log('Volumen:', player.volume());
-            showControls(); // Mostrar controles cuando cambia el volumen
-        }
+/* ========================================================================
+   AUTH
+   ======================================================================== */
+function setAuthMode(mode){
+  authMode = mode;
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-title').textContent = mode === 'signup' ? 'Crea tu cuenta' : 'Inicia sesión';
+  document.getElementById('auth-sub').textContent = mode === 'signup' ? 'Regístrate para empezar a chatear y generar imágenes.' : 'Bienvenido de nuevo a Lainux AI.';
+  document.getElementById('auth-submit').textContent = mode === 'signup' ? 'Crear cuenta' : 'Iniciar sesión';
+  document.getElementById('auth-switch').innerHTML = mode === 'signup'
+    ? '¿Ya tienes cuenta? <a onclick="setAuthMode(\'login\')">Inicia sesión</a>'
+    : '¿No tienes cuenta? <a onclick="setAuthMode(\'signup\')">Regístrate</a>';
+}
+function showAuthError(msg){
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function translateAuthError(msg){
+  if(!msg) return 'Ocurrió un error, intenta de nuevo.';
+  if(msg.includes('Invalid login credentials')) return 'Correo o contraseña incorrectos.';
+  if(msg.includes('User already registered')) return 'Ese correo ya está registrado. Intenta iniciar sesión.';
+  if(msg.includes('Password should be')) return 'La contraseña es demasiado corta.';
+  return msg;
+}
 
-        // --- Funciones de cambio de canal ---
-        function nextChannel() {
-            playChannel(currentChannelIndex + 1);
-            console.log('Siguiente canal...');
-        }
+async function submitAuth(){
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if(!email || !password){ showAuthError('Completa correo y contraseña.'); return; }
+  if(password.length < 6){ showAuthError('La contraseña debe tener al menos 6 caracteres.'); return; }
 
-        function prevChannel() {
-            playChannel(currentChannelIndex - 1);
-            console.log('Canal anterior...');
-        }
+  const btn = document.getElementById('auth-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"><span class="spinner sm"></span> Un momento...</span>';
 
-        // --- Función de selección directa de canal ---
-        function selectChannel() {
-            const channelNumber = parseInt(channelInput.value, 10);
-            if (isNaN(channelNumber) || channelNumber < 1 || channelNumber > channels.length) {
-                channelInfoDisplay.textContent = `Número de canal inválido. Ingrese un número entre 1 y ${channels.length}.`;
-                console.warn('Número de canal inválido ingresado:', channelInput.value);
-                showControls(); // Mostrar controles para mostrar el mensaje de error
-                return;
-            }
-            playChannel(channelNumber - 1); // Ajustar para el índice basado en 0
-            channelInput.value = ''; // Limpiar la entrada después de la selección
-        }
+  try{
+    if(authMode === 'signup'){
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if(error) throw error;
+      if(data.user && !data.session){
+        showAuthError('Cuenta creada. Revisa tu correo para confirmar antes de iniciar sesión (si tu proyecto lo requiere).');
+        btn.disabled = false;
+        btn.textContent = 'Crear cuenta';
+        return;
+      }
+    } else {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+    }
+    await handleAuthedSession();
+  } catch(err){
+    showAuthError(translateAuthError(err.message));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode === 'signup' ? 'Crear cuenta' : 'Iniciar sesión';
+  }
+}
 
+async function logout(){
+  await sb.auth.signOut();
+  currentUser = null;
+  profile = null;
+  currentConversationId = null;
+  chatHistory = [];
+  clearAllAttachments();
+  closeProfileModal();
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
 
-        // --- Oyentes de eventos para nuevos controles ---
-        volUpBtn.addEventListener('click', volumeUp);
-        volDownBtn.addEventListener('click', volumeDown);
-        nextChannelBtn.addEventListener('click', nextChannel);
-        prevChannelBtn.addEventListener('click', prevChannel);
-        goChannelBtn.addEventListener('click', selectChannel);
-        // Permitir presionar Enter en el campo de entrada para seleccionar el canal
-        channelInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                selectChannel();
-            }
-        });
+/* ========================================================================
+   SESSION / PROFILE
+   ======================================================================== */
+async function handleAuthedSession(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user) return;
+  currentUser = user;
 
-        // Oyentes de eventos para mostrar controles en la interacción del usuario
-        tvContainer.addEventListener('mousemove', showControls);
-        tvContainer.addEventListener('touchend', showControls);
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('boot-loader').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  document.getElementById('user-email').textContent = currentUser.email;
+  document.getElementById('avatar-letter').textContent = currentUser.email[0].toUpperCase();
 
-        // Deshabilitar el comportamiento predeterminado de clic para reproducir/pausar de Video.js en el elemento de video
-        player.ready(function() {
-            this.off('click'); // Elimina el controlador de clic predeterminado en el elemento del reproductor
-            // Si el usuario aún quiere controlar la reproducción/pausa a través del área de video,
-            // necesitarían un botón o un gesto específico.
-            // Por ahora, los clics en el área de video no alternarán la reproducción/pausa.
-        });
+  await loadOrCreateProfile();
 
+  renderUsagePills();
+  renderPlanBadge();
+  await loadConversations();
+}
 
-        // Controlador de clic inicial del botón 'Iniciar'
-        iniciarBtn.addEventListener('click', async () => {
-            iniciarBtn.style.display = 'none'; // Ocultar el botón de inicio
-            tvContainer.style.display = 'flex'; // Mostrar el contenedor de TV
+async function loadOrCreateProfile(){
+  let { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
 
-            await loadChannels(); // Cargar canales una vez que el usuario haga clic
+  if(error || !data){
+    const { data: created, error: insertError } = await sb.from('profiles').insert({
+      id: currentUser.id,
+      email: currentUser.email,
+      plan: 'free',
+      images_used: 0,
+      images_reset_at: new Date().toISOString(),
+      messages_used: 0,
+      messages_reset_at: new Date().toISOString()
+    }).select().single();
+    if(insertError){
+      console.error('No se pudo crear el perfil. Revisa que ejecutaste supabase-setup.sql:', insertError);
+      data = null;
+    } else {
+      data = created;
+    }
+  }
 
-            // Solicitar pantalla completa para el elemento de video
-            const videoEl = document.querySelector('video');
-            if (videoEl.requestFullscreen) {
-                videoEl.requestFullscreen();
-            } else if (videoEl.webkitRequestFullscreen) { /* Safari */
-                videoEl.webkitRequestFullscreen();
-            } else if (videoEl.mozRequestFullScreen) { /* Firefox */
-                videoEl.mozRequestFullScreen();
-            } else if (videoEl.msRequestFullscreen) { /* IE11 */
-                videoEl.msRequestFullscreen();
-            }
-            showControls(); // Mostrar controles inicialmente después de iniciar
-        });
+  profile = {
+    id: currentUser.id,
+    email: currentUser.email,
+    plan: (data && data.plan) || 'free',
+    images_used: (data && Number.isFinite(data.images_used)) ? data.images_used : 0,
+    images_reset_at: (data && data.images_reset_at) || new Date().toISOString(),
+    messages_used: (data && Number.isFinite(data.messages_used)) ? data.messages_used : 0,
+    messages_reset_at: (data && data.messages_reset_at) || new Date().toISOString(),
+    stripe_customer_id: data && data.stripe_customer_id,
+    plan_renews_at: data && data.plan_renews_at
+  };
+}
 
-        // Opcional: Controles de teclado para mayor comodidad
-        document.addEventListener('keydown', (event) => {
-            if (tvContainer.style.display === 'flex') { // Solo activo cuando la TV está visible
-                switch (event.key) {
-                    case 'ArrowUp':
-                        volumeUp();
-                        break;
-                    case 'ArrowDown':
-                        volumeDown();
-                        break;
-                    case 'ArrowRight':
-                        nextChannel();
-                        break;
-                    case 'ArrowLeft':
-                        prevChannel();
-                        break;
-                    case ' ': // Barra espaciadora para reproducir/pausar (aún permitida por teclado)
-                        if (player.paused()) {
-                            player.play();
-                        } else {
-                            player.pause();
-                        }
-                        showControls(); // Mostrar controles al usar el teclado para reproducir/pausar
-                        break;
-                }
-            }
-        });
-    </script>
+function timeUntilReset(resetAtISO, windowHours){
+  const resetAt = new Date(resetAtISO).getTime() + windowHours * 3600 * 1000;
+  const diff = resetAt - Date.now();
+  if(diff <= 0) return 'muy pronto';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// Ya no mostramos tiras de uso permanentes: el límite de imágenes solo se
+// comunica cuando el usuario ya lo consumió (ver renderImageLimitBanner).
+function renderUsagePills(){
+  renderImageLimitBanner();
+  updateProfileModalInfo();
+}
+
+function renderPlanBadge(){
+  const badge = document.getElementById('plan-badge');
+  badge.textContent = profile.plan.toUpperCase();
+  badge.className = 'plan-badge fadein ' + (profile.plan !== 'free' ? profile.plan : '');
+  document.getElementById('user-plan-label').textContent = profile.plan;
+}
+
+function renderImageLimitBanner(){
+  const banner = document.getElementById('img-limit-banner');
+  const limits = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
+  const remaining = Math.max(0, limits.images - profile.images_used);
+  if(remaining <= 0){
+    banner.innerHTML = `<div class="limit-banner fadein">Sin imágenes disponibles por ahora. Se reinicia en ${timeUntilReset(profile.images_reset_at, limits.imagesWindowHours)}. Sube de plan para tener más cupo.</div>`;
+  } else {
+    banner.innerHTML = '';
+  }
+}
+
+/* ========================================================================
+   NAVIGATION
+   ======================================================================== */
+function switchView(view){
+  ['chat'].forEach(v=>{
+    const navEl = document.getElementById('nav-'+v);
+    if(navEl) navEl.classList.toggle('active', v===view);
+  });
+  document.getElementById('chat-view').classList.toggle('hidden', view!=='chat');
+  document.getElementById('view-title').textContent = 'Lainux AI';
+}
+
+/* ========================================================================
+   PROFILE MODAL (aquí vive "Planes" ahora)
+   ======================================================================== */
+function openProfileModal(){
+  document.getElementById('profile-modal-overlay').classList.remove('hidden');
+  switchProfileTab('account');
+  updateProfileModalInfo();
+}
+function closeProfileModal(){
+  document.getElementById('profile-modal-overlay').classList.add('hidden');
+}
+function switchProfileTab(tab){
+  document.getElementById('ptab-account').classList.toggle('active', tab==='account');
+  document.getElementById('ptab-plan').classList.toggle('active', tab==='plan');
+  document.getElementById('profile-tab-account').classList.toggle('hidden', tab!=='account');
+  document.getElementById('profile-tab-plan').classList.toggle('hidden', tab!=='plan');
+  if(tab === 'plan') renderPlanCards();
+}
+function updateProfileModalInfo(){
+  if(!currentUser || !profile) return;
+  document.getElementById('modal-avatar-letter').textContent = currentUser.email[0].toUpperCase();
+  document.getElementById('modal-user-email').textContent = currentUser.email;
+  document.getElementById('modal-user-plan').textContent = profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1);
+  const limits = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
+  const remaining = Math.max(0, limits.images - profile.images_used);
+  document.getElementById('modal-images-left').textContent = `${remaining} / ${limits.images}`;
+}
+
+/* ========================================================================
+   CONVERSACIONES (historial estilo ChatGPT)
+   ======================================================================== */
+async function loadConversations(){
+  const list = document.getElementById('conv-list');
+  // keep skeleton rows already in the DOM while we fetch
+  const { data, error } = await sb.from('conversations').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending:false });
+  list.innerHTML = '<div class="conv-label">Chats</div>';
+  if(error){
+    list.innerHTML += '<div class="conv-empty">No se pudieron cargar tus chats.</div>';
+    return;
+  }
+  if(!data || data.length === 0){
+    list.innerHTML += '<div class="conv-empty">Todavía no tienes chats.</div>';
+    return;
+  }
+  data.forEach(conv => {
+    const item = document.createElement('div');
+    item.className = 'conv-item fadein' + (conv.id === currentConversationId ? ' active' : '');
+    item.onclick = () => openConversation(conv.id);
+    item.innerHTML = `<span class="title">${escapeHtml(conv.title)}</span><button class="conv-del" title="Eliminar" onclick="event.stopPropagation(); deleteConversation('${conv.id}', this)">✕</button>`;
+    list.appendChild(item);
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function startNewConversation(){
+  if(isSending) return;
+  currentConversationId = null;
+  chatHistory = [];
+  clearAllAttachments();
+  document.getElementById('chat-log').innerHTML = '';
+  document.getElementById('chat-log').classList.add('hidden');
+  document.getElementById('conv-loading-skel').classList.add('hidden');
+  document.getElementById('empty-state').classList.remove('hidden');
+  switchView('chat');
+  loadConversations();
+  document.getElementById('chat-input').focus();
+}
+
+async function openConversation(id){
+  if(isSending) return;
+  currentConversationId = id;
+  switchView('chat');
+  clearAllAttachments();
+
+  // show skeleton immediately, hide real content while it loads
+  document.getElementById('empty-state').classList.add('hidden');
+  const log = document.getElementById('chat-log');
+  log.classList.add('hidden');
+  const skel = document.getElementById('conv-loading-skel');
+  skel.classList.remove('hidden');
+
+  const { data, error } = await sb.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending:true });
+  chatHistory = [];
+  log.innerHTML = '';
+
+  skel.classList.add('hidden');
+
+  if(!error && data && data.length){
+    log.classList.remove('hidden');
+    data.forEach(m => {
+      let attachments = [];
+      try{ attachments = m.attachments ? JSON.parse(m.attachments) : []; } catch(e){ attachments = []; }
+      chatHistory.push({ role: m.role, content: m.content, attachments });
+      pushMsg(m.role, m.content, attachments);
+    });
+  } else {
+    document.getElementById('empty-state').classList.remove('hidden');
+    log.classList.add('hidden');
+  }
+  loadConversations();
+}
+
+async function deleteConversation(id, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = '···'; }
+  await sb.from('conversations').delete().eq('id', id);
+  if(currentConversationId === id) startNewConversation();
+  else loadConversations();
+}
+
+async function ensureConversation(firstMessageText){
+  if(currentConversationId) return currentConversationId;
+  const title = (firstMessageText || 'Imagen generada').slice(0, 40) + (firstMessageText && firstMessageText.length > 40 ? '…' : '');
+  const { data, error } = await sb.from('conversations').insert({ user_id: currentUser.id, title }).select().single();
+  if(error){ console.error(error); return null; }
+  currentConversationId = data.id;
+  loadConversations();
+  return currentConversationId;
+}
+
+async function saveMessage(conversationId, role, content, attachments){
+  await sb.from('messages').insert({
+    conversation_id: conversationId,
+    user_id: currentUser.id,
+    role,
+    content,
+    attachments: attachments && attachments.length ? JSON.stringify(attachments) : null
+  });
+  await sb.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
+}
+
+/* ========================================================================
+   ATTACH MENU (hamburguesa)
+   ======================================================================== */
+function toggleAttachMenu(evt){
+  evt.stopPropagation();
+  document.getElementById('attach-menu').classList.toggle('hidden');
+}
+function closeAttachMenu(){
+  document.getElementById('attach-menu').classList.add('hidden');
+}
+document.addEventListener('click', function(e){
+  const menu = document.getElementById('attach-menu');
+  const wrap = document.querySelector('.attach-menu-wrap');
+  if(menu && !menu.classList.contains('hidden') && wrap && !wrap.contains(e.target)){
+    menu.classList.add('hidden');
+  }
+});
+
+/* ========================================================================
+   ATTACHMENTS (subir archivo / tomar foto)
+   ======================================================================== */
+function fileKind(file){
+  return file.type && file.type.startsWith('image/') ? 'image' : 'file';
+}
+
+function handleFileSelect(evt){
+  const files = Array.from(evt.target.files || []);
+  evt.target.value = ''; // allow selecting the same file again later
+  if(!files.length) return;
+
+  const room = MAX_ATTACHMENTS - pendingAttachments.length;
+  if(room <= 0){
+    renderComposerNotice(`Máximo ${MAX_ATTACHMENTS} adjuntos por mensaje.`);
+    return;
+  }
+
+  files.slice(0, room).forEach(file => addAttachment(file));
+}
+
+function addAttachment(file){
+  const id = 'att_' + Math.random().toString(36).slice(2);
+  const kind = fileKind(file);
+  const att = { id, file, kind, previewUrl: kind === 'image' ? URL.createObjectURL(file) : null, uploading: true, uploadedUrl: null, error: null };
+  pendingAttachments.push(att);
+  renderAttachPreviews();
+  uploadAttachment(att);
+}
+
+async function uploadAttachment(att){
+  try{
+    const ext = (att.file.name.split('.').pop() || 'bin').toLowerCase();
+    const path = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await sb.storage.from(UPLOAD_BUCKET).upload(path, att.file, { upsert: false });
+    if(error) throw error;
+    const { data: pub } = sb.storage.from(UPLOAD_BUCKET).getPublicUrl(path);
+    att.uploadedUrl = pub && pub.publicUrl;
+    att.uploading = false;
+  } catch(err){
+    console.error('upload error', err);
+    att.uploading = false;
+    att.error = 'No se pudo subir';
+  }
+  renderAttachPreviews();
+}
+
+function removeAttachment(id){
+  const att = pendingAttachments.find(a => a.id === id);
+  if(att && att.previewUrl) URL.revokeObjectURL(att.previewUrl);
+  pendingAttachments = pendingAttachments.filter(a => a.id !== id);
+  renderAttachPreviews();
+}
+
+function clearAllAttachments(){
+  pendingAttachments.forEach(a => { if(a.previewUrl) URL.revokeObjectURL(a.previewUrl); });
+  pendingAttachments = [];
+  renderAttachPreviews();
+}
+
+function renderAttachPreviews(){
+  const row = document.getElementById('attach-preview-row');
+  if(!pendingAttachments.length){
+    row.classList.add('hidden');
+    row.innerHTML = '';
+    return;
+  }
+  row.classList.remove('hidden');
+  row.innerHTML = '';
+  pendingAttachments.forEach(att => {
+    const cell = document.createElement('div');
+    cell.className = 'attach-preview fadein' + (att.uploading ? ' uploading' : '');
+    if(att.kind === 'image' && att.previewUrl){
+      const img = document.createElement('img');
+      img.src = att.previewUrl;
+      cell.appendChild(img);
+    } else {
+      const label = document.createElement('div');
+      label.className = 'file-ico';
+      label.textContent = '📄 ' + (att.file.name.length > 10 ? att.file.name.slice(0,8) + '…' : att.file.name);
+      cell.appendChild(label);
+    }
+    if(att.uploading){
+      const sp = document.createElement('div');
+      sp.className = 'up-spinner';
+      sp.innerHTML = '<div class="spinner sm"></div>';
+      cell.appendChild(sp);
+    }
+    const rm = document.createElement('button');
+    rm.className = 'remove-attach';
+    rm.textContent = '✕';
+    rm.onclick = () => removeAttachment(att.id);
+    cell.appendChild(rm);
+    row.appendChild(cell);
+  });
+  updateSendButtonState();
+}
+
+function renderComposerNotice(text){
+  // lightweight transient notice reusing the limit banner area
+  const banner = document.getElementById('img-limit-banner');
+  const prev = banner.innerHTML;
+  banner.innerHTML = `<div class="limit-banner fadein">${escapeHtml(text)}</div>`;
+  setTimeout(() => { renderImageLimitBanner(); }, 2500);
+}
+
+function toggleImageMode(){
+  imageModeOn = !imageModeOn;
+  const btn = document.getElementById('image-mode-btn');
+  btn.classList.toggle('on', imageModeOn);
+  document.getElementById('chat-input').placeholder = imageModeOn
+    ? 'Describe la imagen que quieres generar...'
+    : 'Escribe un mensaje a Lainux AI...';
+}
+
+function updateSendButtonState(){
+  const anyUploading = pendingAttachments.some(a => a.uploading);
+  document.getElementById('send-btn').disabled = isSending || anyUploading;
+}
+
+/* ========================================================================
+   CHAT
+   ======================================================================== */
+function pushMsg(role, text, attachments, opts){
+  opts = opts || {};
+  const log = document.getElementById('chat-log');
+  document.getElementById('empty-state').classList.add('hidden');
+  document.getElementById('conv-loading-skel').classList.add('hidden');
+  log.classList.remove('hidden');
+
+  const row = document.createElement('div');
+  row.className = 'msg-row fadein ' + (role === 'user' ? 'user' : 'assistant');
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? (currentUser.email[0] || 'U').toUpperCase() : 'L';
+
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+
+  if(attachments && attachments.length){
+    const attWrap = document.createElement('div');
+    attWrap.className = 'msg-attachments';
+    attachments.forEach(a => {
+      if(a.kind === 'image'){
+        const img = document.createElement('img');
+        img.src = a.url;
+        attWrap.appendChild(img);
+      } else {
+        const chip = document.createElement('div');
+        chip.className = 'file-chip';
+        chip.textContent = '📄 ' + a.name;
+        attWrap.appendChild(chip);
+      }
+    });
+    body.appendChild(attWrap);
+  }
+
+  if(text){
+    const txt = document.createElement('div');
+    txt.className = 'msg-text';
+    txt.textContent = text;
+    body.appendChild(txt);
+  }
+
+  row.appendChild(avatar);
+  row.appendChild(body);
+  log.appendChild(row);
+  document.getElementById('chat-log-wrap').scrollTop = document.getElementById('chat-log-wrap').scrollHeight;
+  return { row, body };
+}
+
+document.getElementById('chat-input').addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+});
+document.getElementById('chat-input').addEventListener('input', function(){
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+});
+
+async function getAccessToken(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) throw new Error('no_session');
+  return session.access_token;
+}
+
+async function callProxy(url, payload, signal){
+  const token = await getAccessToken();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload),
+    signal
+  });
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok){
+    const err = new Error(data.error || 'network');
+    err.status = res.status;
+    err.scope = data.scope;
+    err.reset_at = data.reset_at;
+    err.detail = data.detail;
+    err.upstreamStatus = data.status;
+    throw err;
+  }
+  return data;
+}
+
+function setSendingState(sending){
+  isSending = sending;
+  document.getElementById('new-chat-btn').disabled = sending;
+  updateSendButtonState();
+}
+
+function wait(ms, signal){
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    if(signal){
+      signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
+    }
+  });
+}
+
+async function sendMessage(){
+  if(isSending) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  const hasAttachments = pendingAttachments.length > 0;
+  if(!text && !hasAttachments) return;
+
+  if(pendingAttachments.some(a => a.uploading)){
+    renderComposerNotice('Espera a que terminen de subirse los adjuntos.');
+    return;
+  }
+  if(pendingAttachments.some(a => a.error)){
+    renderComposerNotice('Quita los adjuntos que fallaron antes de enviar.');
+    return;
+  }
+
+  const limits = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
+
+  if(imageModeOn){
+    if(profile.images_used >= limits.images){
+      renderImageLimitBanner();
+      return;
+    }
+    if(!text){
+      renderComposerNotice('Describe la imagen que quieres generar.');
+      return;
+    }
+  }
+  // El chat de texto ya no tiene límite de mensajes.
+
+  const attachmentsForMsg = pendingAttachments.map(a => ({
+    kind: a.kind, url: a.uploadedUrl, name: a.file.name
+  }));
+
+  const convId = await ensureConversation(text);
+
+  input.value = '';
+  input.style.height = 'auto';
+  const wasImageMode = imageModeOn;
+
+  setSendingState(true);
+  pushMsg('user', text, attachmentsForMsg);
+  chatHistory.push({ role:'user', content:text, attachments: attachmentsForMsg });
+  if(convId) saveMessage(convId, 'user', text, attachmentsForMsg);
+  clearAllAttachments();
+  if(imageModeOn){ imageModeOn = false; document.getElementById('image-mode-btn').classList.remove('on'); document.getElementById('chat-input').placeholder = 'Escribe un mensaje a Lainux AI...'; }
+
+  const log = document.getElementById('chat-log');
+
+  if(wasImageMode){
+    // inline image generation skeleton in the chat flow, con botón de cancelar
+    imageGenCancelled = false;
+    currentImageGenController = new AbortController();
+    const signal = currentImageGenController.signal;
+
+    const row = document.createElement('div');
+    row.className = 'msg-row assistant fadein';
+    row.innerHTML = `<div class="avatar">L</div><div class="msg-body"><div class="img-skel skel"><div class="spinner"></div><div>Generando imagen...</div><button class="cancel-gen-btn" onclick="cancelImageGeneration()">Cancelar</button></div></div>`;
+    log.appendChild(row);
+    document.getElementById('chat-log-wrap').scrollTop = document.getElementById('chat-log-wrap').scrollHeight;
+
+    const startedAt = Date.now();
+
+    try{
+      // Lanzamos la llamada real y, en paralelo, garantizamos un mínimo de ~5s
+      // para que la generación no se sienta instantánea.
+      const [data] = await Promise.all([
+        callProxy(EDGE_FUNCTION_URL, { type: 'image', prompt: text }, signal),
+        wait(IMAGE_GEN_MIN_MS, signal)
+      ]);
+
+      if(imageGenCancelled) return;
+
+      row.querySelector('.msg-body').innerHTML = `<div class="msg-image-result"><img src="${data.dataUrl}"></div>`;
+      chatHistory.push({ role:'assistant', content:'', attachments:[{kind:'image', url:data.dataUrl, name:'Imagen generada'}] });
+      if(convId) saveMessage(convId, 'assistant', '', [{kind:'image', url:data.dataUrl, name:'Imagen generada'}]);
+      profile.images_used = data.images_used;
+      profile.messages_used = data.messages_used;
+      renderUsagePills();
+    } catch(err){
+      if(err.name === 'AbortError' || imageGenCancelled){
+        row.remove();
+      } else {
+        row.querySelector('.msg-body').innerHTML = `<div class="msg-text">${escapeHtml(imageErrorMessage(err))}</div>`;
+        console.error(err);
+      }
+    } finally {
+      currentImageGenController = null;
+      setSendingState(false);
+      input.focus();
+    }
+    return;
+  }
+
+  const typingRow = document.createElement('div');
+  typingRow.className = 'msg-row assistant fadein';
+  typingRow.innerHTML = '<div class="avatar">L</div><div class="msg-body"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  log.appendChild(typingRow);
+  document.getElementById('chat-log-wrap').scrollTop = document.getElementById('chat-log-wrap').scrollHeight;
+
+  try{
+    const data = await callProxy(EDGE_FUNCTION_URL, { type: 'chat', messages: chatHistory });
+    typingRow.remove();
+    pushMsg('assistant', data.reply);
+    chatHistory.push({ role:'assistant', content:data.reply });
+    if(convId) saveMessage(convId, 'assistant', data.reply);
+
+    profile.images_used = data.images_used;
+    profile.messages_used = data.messages_used;
+    renderUsagePills();
+  } catch(err){
+    typingRow.remove();
+    pushMsg('assistant', chatErrorMessage(err));
+    console.error(err);
+  } finally {
+    setSendingState(false);
+    input.focus();
+  }
+}
+
+function cancelImageGeneration(){
+  imageGenCancelled = true;
+  if(currentImageGenController){
+    currentImageGenController.abort();
+  }
+}
+
+function chatErrorMessage(err){
+  if(err.message === 'no_session') return 'Tu sesión expiró. Recarga la página e inicia sesión de nuevo.';
+  if(err.message === 'unauthorized') return 'No se pudo verificar tu sesión. Recarga la página.';
+  if(err.message === 'limit_reached') return `Alcanzaste tu límite de imágenes. Se reinicia en ${timeUntilReset(err.reset_at, (PLAN_LIMITS[profile.plan]||PLAN_LIMITS.free).imagesWindowHours)}.`;
+  if(err.message === 'missing_server_key') return 'Falta configurar las claves del servidor en Supabase (Edge Functions → Secrets).';
+  if(err.message === 'upstream' && err.upstreamStatus === 429) return 'El motor de chat está saturado por un momento. Espera unos segundos y vuelve a intentar.';
+  if(err.message === 'upstream') return `El proveedor de IA devolvió un error (${err.upstreamStatus}): ${err.detail || 'sin detalle'}`;
+  return 'Hubo un problema generando la respuesta. Intenta de nuevo.';
+}
+
+function imageErrorMessage(err){
+  if(err.message === 'limit_reached') return 'Sin imágenes disponibles por ahora.';
+  if(err.message === 'no_session' || err.message === 'unauthorized') return 'Tu sesión expiró, recarga la página.';
+  if(err.message === 'missing_server_key') return 'Falta configurar el secreto en Supabase.';
+  if(err.message === 'upstream') return `Error (${err.upstreamStatus}): ${err.detail || 'sin detalle'}`;
+  return 'No se pudo generar. Intenta de nuevo.';
+}
+
+/* ========================================================================
+   PLANES / PAGOS (Stripe) — ahora dentro del modal de perfil
+   ======================================================================== */
+function renderPlanCards(){
+  const wrap = document.getElementById('pricing-cards');
+  wrap.innerHTML = '';
+  PLAN_CARDS.forEach(card => {
+    const isCurrent = profile.plan === card.id;
+    const el = document.createElement('div');
+    el.className = 'plan-card fadein' + (isCurrent ? ' current' : '');
+    let actionHtml = '';
+    if(isCurrent){
+      actionHtml = card.id === 'free'
+        ? `<button class="btn btn-full" disabled>Plan actual</button>`
+        : `<button class="btn btn-full" onclick="openBillingPortal(this)">Gestionar suscripción</button>`;
+    } else if(card.id === 'free'){
+      actionHtml = `<button class="btn btn-full" disabled>Plan gratuito</button>`;
+    } else {
+      actionHtml = `<button class="btn btn-accent btn-full" onclick="subscribeToPlan('${card.id}', this)">Suscribirme</button>`;
+    }
+    el.innerHTML = `
+      <span class="plan-tag ${card.tagClass}">${card.name}</span>
+      <h3>${card.name}</h3>
+      <div class="plan-price">${card.price} <small>${card.period}</small></div>
+      <ul class="plan-list">${card.features.map(f => `<li>${f}</li>`).join('')}</ul>
+      ${actionHtml}
+    `;
+    wrap.appendChild(el);
+  });
+}
+
+async function subscribeToPlan(plan, btnEl){
+  const original = btnEl ? btnEl.innerHTML : '';
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-spinner"><span class="spinner sm"></span> Redirigiendo...</span>'; }
+  try{
+    const data = await callProxy(BILLING_FUNCTION_URL, { action: 'create_checkout', plan });
+    if(data.url) window.location.href = data.url;
+  } catch(err){
+    console.error(err);
+    alert(billingErrorMessage(err));
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = original; }
+  }
+}
+
+async function openBillingPortal(btnEl){
+  const original = btnEl ? btnEl.innerHTML : '';
+  if(btnEl){ btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-spinner"><span class="spinner sm"></span> Un momento...</span>'; }
+  try{
+    const data = await callProxy(BILLING_FUNCTION_URL, { action: 'create_portal' });
+    if(data.url) window.location.href = data.url;
+  } catch(err){
+    console.error(err);
+    alert(billingErrorMessage(err));
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = original; }
+  }
+}
+
+function billingErrorMessage(err){
+  if(err.message === 'missing_server_key') return 'Los pagos todavía no están configurados. Intenta más tarde.';
+  if(err.message === 'no_customer') return 'Todavía no tienes una suscripción activa.';
+  return 'No se pudo iniciar el proceso de pago. Intenta de nuevo.';
+}
+
+/* ========================================================================
+   INIT
+   ======================================================================== */
+(async function init(){
+  const params = new URLSearchParams(window.location.search);
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    await handleAuthedSession();
+    if(params.get('checkout') === 'success'){
+      await loadOrCreateProfile();
+      renderUsagePills();
+      renderPlanBadge();
+      openProfileModal();
+      switchProfileTab('plan');
+    }
+  } else {
+    document.getElementById('boot-loader').classList.add('hidden');
+    document.getElementById('auth-screen').classList.remove('hidden');
+  }
+  sb.auth.onAuthStateChange((event) => {
+    if(event === 'SIGNED_OUT'){
+      document.getElementById('app-shell').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+    }
+  });
+})();
+</script>
 </body>
 </html>

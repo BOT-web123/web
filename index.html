@@ -1244,9 +1244,16 @@ async function sendMessage(){
   document.getElementById('chat-log-wrap').scrollTop = document.getElementById('chat-log-wrap').scrollHeight;
 
   try{
-    // La API de IA no acepta el campo "attachments" dentro de cada mensaje,
-    // así que solo enviamos role y content.
-    const sanitizedMessages = chatHistory.map(m => ({ role: m.role, content: m.content || '' }));
+    // Enviamos role, content y, si hay, los adjuntos de imagen (con su URL pública)
+    // para que el backend arme el mensaje multimodal con el modelo de visión.
+    const sanitizedMessages = chatHistory.map(m => {
+      const imgAttachments = (m.attachments || []).filter(a => a.kind === 'image' && a.url);
+      return {
+        role: m.role,
+        content: m.content || '',
+        attachments: imgAttachments.length ? imgAttachments.map(a => ({ kind:'image', url:a.url })) : undefined
+      };
+    });
     const data = await callProxy(EDGE_FUNCTION_URL, { type: 'chat', messages: sanitizedMessages });
     typingRow.remove();
     pushMsg('assistant', data.reply);

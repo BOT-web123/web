@@ -1128,6 +1128,60 @@ async function callProxy(url, payload, signal){
   return data;
 }
 
+async function streamChatMessage(sanitizedMessages, onDelta){
+  const token = await getAccessToken();
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ type: 'chat', messages: sanitizedMessages })
+  });
+
+  if(!res.ok || !res.body){
+    let data = {};
+    try{ data = await res.json(); }catch(e){}
+    const err = new Error(data.error || 'network');
+    err.status = res.status;
+    err.detail = data.detail;
+    err.upstreamStatus = data.status;
+    throw err;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';
+  let finalUsage = null;
+
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buffer += decoder.decode(value, { stream:true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for(const line of lines){
+      const trimmed = line.trim();
+      if(!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if(!payload) continue;
+      let j;
+      try{ j = JSON.parse(payload); }catch(e){ continue; }
+      if(j.error){
+        const err = new Error(j.error);
+        throw err;
+      }
+      if(j.delta){
+        fullText += j.delta;
+        onDelta(fullText, j.delta);
+      }
+      if(j.done){
+        finalUsage = j;
+      }
+    }
+  }
+
+  return { fullText, usage: finalUsage };
+}
+
 function setSendingState(sending){
   isSending = sending;
   document.getElementById('new-chat-btn').disabled = sending;
@@ -1241,7 +1295,11 @@ async function sendMessage(){
   typingRow.className = 'msg-row assistant fadein';
   typingRow.innerHTML = '<div class="avatar">L</div><div class="msg-body"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
   log.appendChild(typingRow);
-  document.getElementById('chat-log-wrap').scrollTop = document.getElementById('chat-log-wrap').scrollHeight;
+  const chatLogWrap = document.getElementById('chat-log-wrap');
+  chatLogWrap.scrollTop = chatLogWrap.scrollHeight;
+
+  const bodyEl = typingRow.querySelector('.msg-body');
+  let textStarted = false;
 
   try{
     // Enviamos role, content y, si hay, los adjuntos de imagen (con su URL pública)
@@ -1254,15 +1312,32 @@ async function sendMessage(){
         attachments: imgAttachments.length ? imgAttachments.map(a => ({ kind:'image', url:a.url })) : undefined
       };
     });
-    const data = await callProxy(EDGE_FUNCTION_URL, { type: 'chat', messages: sanitizedMessages });
-    typingRow.remove();
-    pushMsg('assistant', data.reply);
-    chatHistory.push({ role:'assistant', content:data.reply });
-    if(convId) saveMessage(convId, 'assistant', data.reply);
 
-    profile.images_used = data.images_used;
-    profile.messages_used = data.messages_used;
-    renderUsagePills();
+    const { fullText, usage } = await streamChatMessage(sanitizedMessages, (accumulated) => {
+      if(!textStarted){
+        textStarted = true;
+        bodyEl.innerHTML = '<div class="msg-text"></div>';
+      }
+      bodyEl.querySelector('.msg-text').textContent = accumulated;
+      // auto-scroll solo si el usuario ya estaba al fondo
+      const nearBottom = chatLogWrap.scrollHeight - chatLogWrap.scrollTop - chatLogWrap.clientHeight < 120;
+      if(nearBottom) chatLogWrap.scrollTop = chatLogWrap.scrollHeight;
+    });
+
+    const finalText = fullText || 'No se recibió respuesta. Intenta de nuevo.';
+    if(!textStarted){
+      bodyEl.innerHTML = '<div class="msg-text"></div>';
+    }
+    bodyEl.querySelector('.msg-text').textContent = finalText;
+
+    chatHistory.push({ role:'assistant', content:finalText });
+    if(convId) saveMessage(convId, 'assistant', finalText);
+
+    if(usage){
+      profile.images_used = usage.images_used;
+      profile.messages_used = usage.messages_used;
+      renderUsagePills();
+    }
   } catch(err){
     typingRow.remove();
     pushMsg('assistant', chatErrorMessage(err));

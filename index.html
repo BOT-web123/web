@@ -1244,7 +1244,10 @@ async function sendMessage(){
   document.getElementById('chat-log-wrap').scrollTop = document.getElementById('chat-log-wrap').scrollHeight;
 
   try{
-    const data = await callProxy(EDGE_FUNCTION_URL, { type: 'chat', messages: chatHistory });
+    // La API de IA no acepta el campo "attachments" dentro de cada mensaje,
+    // así que solo enviamos role y content.
+    const sanitizedMessages = chatHistory.map(m => ({ role: m.role, content: m.content || '' }));
+    const data = await callProxy(EDGE_FUNCTION_URL, { type: 'chat', messages: sanitizedMessages });
     typingRow.remove();
     pushMsg('assistant', data.reply);
     chatHistory.push({ role:'assistant', content:data.reply });
